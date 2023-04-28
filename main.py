@@ -219,7 +219,7 @@ main_line = tk.Toplevel(root)
 main_line.config(bg='black')
 main_line.geometry('70x16')
 main_line.resizable(0, 0)
-main_line.attributes('-top', True)
+main_line.attributes('-topmost', True)
 main_line.overrideredirect(True)
 
 main_button = tk.Button(main_line, font="Adobe 12", justify='left', text='', fg='green', bg='black', command=main_click)

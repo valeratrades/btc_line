@@ -21,7 +21,7 @@ async def get_ratio(session, symbol):
         async with session.get(f"https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol={symbol}&period=5m&limit=1") as resp:
             r = await resp.json()
             r = r[0]['longShortRatio']
-            if not r==float('inf'):
+            if not r[:3].lower() == 'inf':
                 ratios.append((symbol, r[:3]))
     except:
         pass

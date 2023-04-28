@@ -3,7 +3,8 @@ from alpaca_trade_api.stream import Stream
 
 log = logging.getLogger(__name__)
 
-config = json.load(open('config.json', 'r'))
+script_dir = os.path.dirname(os.path.realpath(__file__))
+config = json.load(open(os.path.join(script_dir, 'config.json'), 'r'))
 API_KEY = config['alpaca']['key']
 API_SECRET = config['alpaca']['secret']
 os.environ['APCA_API_KEY_ID'] = API_KEY
@@ -16,9 +17,9 @@ async def dump_data(t):
 
 def drop_timestamp(interval):
     while True:
-        last_timestamp = json.loads(os.environ.get('SPY_FEED_DATA', json.dumps((0, None))))[0]
+        last_timestamp = json.load(open(shared_data_path, 'r'))[0]
         if last_timestamp + interval < time.time():
-            os.environ['SPY_FEED_DATA'] = json.dumps((time.time(), None))
+            json.dump((time.time(), None), open(shared_data_path, 'w'))
         time.sleep(interval)
 
 def main():

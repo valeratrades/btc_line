@@ -88,6 +88,7 @@ def get_open_interest(symbol='btc'):
 
 first_update = True
 def update():
+    global additional_line, large_window
     global buffer_longs, update_ids, process, first_update
     call = get_percent_longs()
     if not call is None:
@@ -115,6 +116,7 @@ def update():
 
     def update_large_window():
         if large_window is not None:
+            global large_label
             large_window_dir =  os.path.join(script_dir, "large_window")
             scripts = [os.path.join(large_window_dir, f) for f in os.listdir(large_window_dir) if f.endswith(".py")]
 
@@ -169,17 +171,23 @@ def SPY_show(state):
     SPY_label.config(text=f"{round(state, 2)}")
     SPY_window.lift()
 
+def _large_window_on_close():
+    global large_window, large_label
+    if large_window is not None:
+        large_window.destroy()
+        large_window = None
 def additional_click(*args):
     global large_window, large_label
     if large_window is None:
         large_window = tk.Toplevel(root)
         large_window.config(bg='black')
-        large_window.geometry(f'{large_dimensions[0]}x{large_dimensions[1]}+{main_line.winfo_x()+main_line.winfo_width()}+{main_line.winfo_y()+additional_line.winfo_height()}')
+        large_window.geometry(f'{large_dimensions[0]}x{large_dimensions[1]}+{main_line.winfo_x()+main_line.winfo_width()}+{main_line.winfo_y()+additional_line.winfo_height()}') 
         large_window.attributes('-topmost', True)
         large_window.title('Market Info')
 
         large_label = tk.Label(large_window, font=("Courier", 12), justify='left', text='', fg='green', bg='black')
         large_label.pack(anchor='w')
+        large_window.protocol("WM_DELETE_WINDOW", _large_window_on_close)
 
         """TODO: also open scrolling window for the volumes script (change it so it a) plots logarithmic
                 values, b) has bg='whit' c) move to negative coordinates, so opens only if there is a 
@@ -192,7 +200,7 @@ def additional_click(*args):
         large_window = None
 
 def main_click(*args):
-    global additional_line, additional_button
+    global additional_line, additional_button, large_window
     if additional_line is None:
         additional_line = tk.Toplevel(root)
         additional_line.config(bg='black')

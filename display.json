@@ -1,8 +1,14 @@
 {
     "large_window": {
         "labels": {
-            "LSRoutliers": "Most Longed:          Most Shorted:",
-            "CMEpositions": "CME positions:"
+            "LSRoutliers": {
+                "text": "Most Longed:          Most Shorted:",
+                "pos": 0
+            },
+            "CMEpositions": {
+                "text": "[(Long, Short), Inst and lev-Funds]",
+                "pos": 1
+            }
         }
     }
 }

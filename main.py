@@ -1,4 +1,4 @@
-import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures
+import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal
 import tkinter as tk
 
 settings = {
@@ -16,6 +16,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 sys.path.append(script_dir)
 
+
 additional_width = 120
 SPY_width = 52
 large_dimensions = (420, 220)
@@ -27,6 +28,12 @@ update_ids = []
 tempdir = tempfile.gettempdir()
 json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
 display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
+
+def sigterm_handler(signum, frame):
+    global process
+    process.send_signal(signal.SIGTERM)
+    os.kill(os.getpid(), signal.SIGTERM)
+signal.signal(signal.SIGTERM, sigterm_handler)
 
 def on_message(ws, message):
     global buffer_longs, market_open, market_close, SPY_window, SPY_show
@@ -168,8 +175,11 @@ def large_config(config):
     labels = display['large_window']['labels']
     text = ""
     for component in config:
-        text+= labels[component]+'\n' if settings['label_data'] else ''
-        text+= f"{config[component]}\n"
+        lines = config[component].splitlines()
+        if settings['label_data']:
+            lines.insert(labels[component]['pos'], labels[component]['text'])
+        text+= "\n".join(lines)
+        text+= "\n"
     text = text[:-1] if text.endswith('\n') else text
     if large_window is not None:
         large_label.config(text=text)

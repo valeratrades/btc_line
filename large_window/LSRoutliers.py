@@ -42,12 +42,13 @@ async def main(symbols):
         await asyncio.gather(*tasks)
         sorted_ratios = sorted(ratios, key=lambda x: float(x[1]))
         
-        result_string = 'Most Longed:          Most Shorted:'
+        result_string = ''
         for r in range(most_longed):
             m_pair = sorted_ratios[-r-1][0][:-4]+':'
             l_pair = sorted_ratios[r][0][:-4]+':'
             second_row = f'       ├{l_pair:<9} {sorted_ratios[r][1]}' if r < most_shorted else ''
-            result_string += f'\n     ├{m_pair:<9} {sorted_ratios[-r-1][1]}{second_row}'
+            result_string += f'     ├{m_pair:<9} {sorted_ratios[-r-1][1]}{second_row}\n'
+        result_string = result_string[:-1]
         
         large_window = json.load(open(os.path.join(tempdir,'large_window.json'), 'r'))
         large_window['LSRoutliers'] = result_string

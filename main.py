@@ -2,7 +2,12 @@ import websocket, json, threading, time, requests, subprocess, os, sys, tempfile
 import tkinter as tk
 
 settings = {
-    "comparison_limit": 1 # all comparisons will be done against the value {limit} hours ago.
+    "comparison_limit": 1, # all comparisons will be done against the value {limit} hours ago.
+    "label_data": True,
+    "large_window": {
+        "LSRoutliers": True,
+        "CMEpositions": True
+    }
 }
 #==========================================================
 
@@ -20,6 +25,7 @@ SPY_window = None
 update_ids = []
 tempdir = tempfile.gettempdir()
 json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
+display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
 
 def on_message(ws, message):
     global buffer_longs, market_open, market_close, SPY_window, SPY_show
@@ -106,7 +112,7 @@ def update():
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(additional_line_queue)
                 longs, open_interest = future.result()
-                additional_button.config(text=f"{longs}*{open_interest}")
+            additional_config(longs, open_interest)
 
     def large_window_queue(script_path):
         try:
@@ -116,20 +122,16 @@ def update():
 
     def update_large_window():
         if large_window is not None:
-            global large_label
             large_window_dir =  os.path.join(script_dir, "large_window")
-            scripts = [os.path.join(large_window_dir, f) for f in os.listdir(large_window_dir) if f.endswith(".py")]
+            global large_window_config
+            scripts = [os.path.join(large_window_dir, f) for f in os.listdir(large_window_dir) if (f.endswith(".py") and f[:-3] in large_window_config)]
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [executor.submit(large_window_queue, script) for script in scripts]
                 concurrent.futures.wait(futures)
 
-            large = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))
-            text = ""
-            for component in large:
-                text+= f"{large[component]}\n"
-            if large_window is not None:
-                large_label.config(text=text)
+            data = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))
+            large_config(data)
 
     additional_button_thread = threading.Thread(target=update_additional_line, daemon=True)
     large_window_thread = threading.Thread(target=update_large_window, daemon=True)
@@ -152,6 +154,28 @@ def update():
     if schedule:
         update_ids.append(root.after(60000, update))
     first_update = False
+
+def additional_config(*args):
+    global additional_line, additional_button
+    longs, open_interest = args
+
+    text = f"{longs}*{open_interest}"
+    if additional_line is not None:
+        additional_button.config(text=text)
+def large_config(config):
+    global large_window, large_label, settings, display
+    labels = display['large_window']['labels']
+    text = ""
+    for component in config:
+        text+= labels[component]+'\n' if settings['label_data'] else ''
+        text+= f"{config[component]}\n"
+    text = text[:-1] if text.endswith('\n') else text
+    if large_window is not None:
+        large_label.config(text=text)
+
+        width = large_label.winfo_reqwidth()
+        height = large_label.winfo_reqheight()
+        large_window.geometry(f"{width}x{height}")
 #---------------------------------------------------------- 
 
 def SPY_show(state):
@@ -237,7 +261,11 @@ t = threading.Thread(target=connect_to_binance)
 t.daemon = True
 t.start()
 process = subprocess.Popen(['python', 'streamSPY.py', 'main'])
-json.dump({'LSRoutliers': '', 'CMEpositions': ''}, open(os.path.join(tempdir,'large_window.json'), 'w'))
+large_window_config = {}
+for key in settings['large_window'].keys():
+    if settings['large_window'][key] == True:
+        large_window_config[key] = ''
+json.dump(large_window_config, open(os.path.join(tempdir,'large_window.json'), 'w'))
 
 root.after(0, update)
 root.mainloop()

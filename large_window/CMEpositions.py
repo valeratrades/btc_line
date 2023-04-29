@@ -24,7 +24,7 @@ def find45(line):
             break
     return numbers[3], numbers[4]
 
-out_str = 'CME positions: \n'
+out_str = ''
 out_str += str(find45(line_positions)) + str(find45(line_changeFrom))
 
 large_window_config = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))

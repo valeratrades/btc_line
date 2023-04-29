@@ -2,5 +2,8 @@
     "alpaca": {
         "key": "PKTJYTJNKYSBHAZYT3CO",
         "secret": "dP9AhnaIkikX84ZRC4ue4OhK5xGDao92c74TkYwg"
+    },
+    "twelvedata": {
+        "key": "72d234b787d5472489055507fe7ef214"
     }
 }

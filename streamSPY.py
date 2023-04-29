@@ -4,9 +4,9 @@ from alpaca_trade_api.stream import Stream
 log = logging.getLogger(__name__)
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
-config = json.load(open(os.path.join(script_dir, 'config.json'), 'r'))
-API_KEY = config['alpaca']['key']
-API_SECRET = config['alpaca']['secret']
+keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
+API_KEY = keys['alpaca']['key']
+API_SECRET = keys['alpaca']['secret']
 os.environ['APCA_API_KEY_ID'] = API_KEY
 os.environ['APCA_API_SECRET_KEY'] = API_SECRET
 tempdir = tempfile.gettempdir()

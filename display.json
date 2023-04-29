@@ -8,6 +8,10 @@
             "CMEpositions": {
                 "text": "[(Long, Short), Inst and lev-Funds]",
                 "pos": 1
+            },
+            "Volatility": {
+                "text": "__Vol; (BVOL, VIX):",
+                "pos": 0
             }
         }
     }

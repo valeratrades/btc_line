@@ -47,7 +47,7 @@ def format(numbers):
     return f"({long}, {short})"
 
 from_date = find_date()
-out_str = f"CME positions; {from_date}:\n"
+out_str = f"__CME positions; {from_date}:\n"
 out_str += format(institutional) + ' ' + format(leveraged_funds)
 
 large_window_config = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))

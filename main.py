@@ -7,7 +7,8 @@ settings = {
     "font_size": 12, # practically sets size of the big windows.
     "large_window": {
         "LSRoutliers": True,
-        "CMEpositions": True
+        "CMEpositions": True,
+        "Volatility": True
     }
 }
 #==========================================================
@@ -27,6 +28,8 @@ SPY_window = None
 update_ids = []
 tempdir = tempfile.gettempdir()
 json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
+keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
+json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
 display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
 
 def sigterm_handler(signum, frame):
@@ -189,6 +192,10 @@ def large_config(config):
         large_window.geometry(f"{width}x{height}")
 #---------------------------------------------------------- 
 
+def SPY_click():
+    global SPY_window
+    SPY_window.lower()
+    SPY_window.after(3000, SPY_window.lift)
 def SPY_show(state):
     global SPY_window, SPY_label
     if SPY_window is None:
@@ -199,7 +206,7 @@ def SPY_show(state):
         SPY_window.overrideredirect(True)
         SPY_window.attributes('-topmost', True)
 
-        SPY_label = tk.Label(SPY_window, font="Adobe 12", text='', fg='green', bg='black')
+        SPY_label = tk.Button(SPY_window, font="Adobe 12", text='', fg='green', bg='black', command=SPY_click)
         SPY_label.pack(anchor='w')
     output = f"{round(state, 2)}"
     output = output+'0' if len(output) <6 else output

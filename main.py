@@ -12,7 +12,7 @@ sys.path.append(script_dir)
 
 additional_width = 120
 SPY_width = 52
-large_dimensions = (420, 210)
+large_dimensions = (420, 220)
 buffer_longs = ""
 additional_line = None
 large_window = None
@@ -237,7 +237,7 @@ t = threading.Thread(target=connect_to_binance)
 t.daemon = True
 t.start()
 process = subprocess.Popen(['python', 'streamSPY.py', 'main'])
-json.dump({'LSRoutliers': ''}, open(os.path.join(tempdir,'large_window.json'), 'w'))
+json.dump({'LSRoutliers': '', 'CMEpositions': ''}, open(os.path.join(tempdir,'large_window.json'), 'w'))
 
 root.after(0, update)
 root.mainloop()

@@ -12,15 +12,20 @@ futures_pairs = []
 for chunk in exchangeInfo['symbols']:
     if chunk["symbol"][-1] == "T":
         futures_pairs.append(chunk["symbol"])
-toRemove = ["BTCSTUSDT"]
+toRemove = ["BTCSTUSDT", "BTCDOMUSDT"]
 for symbol in toRemove:
-    futures_pairs.remove(symbol)
+    try:
+        futures_pairs.remove(symbol)
+    except:
+        pass
 
 async def get_ratio(session, symbol):
     try:
         async with session.get(f"https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol={symbol}&period=5m&limit=1") as resp:
             r = await resp.json()
             r = r[0]['longShortRatio']
+            if r[2] == '.': # if number is >= 10, it would overwise be output as '11.'
+                r[2] == ' '
             if not r[:3].lower() == 'inf':
                 ratios.append((symbol, r[:3]))
     except:

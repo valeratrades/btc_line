@@ -4,6 +4,7 @@ import tkinter as tk
 settings = {
     "comparison_limit": 1, # all comparisons will be done against the value {limit} hours ago.
     "label_data": True,
+    "font_size": 12, # practically sets size of the big windows.
     "large_window": {
         "LSRoutliers": True,
         "CMEpositions": True
@@ -196,7 +197,7 @@ def SPY_show(state):
     SPY_window.lift()
 
 def _large_window_on_close():
-    global large_window, large_label
+    global large_window, large_label, settings
     if large_window is not None:
         large_window.destroy()
         large_window = None
@@ -209,7 +210,7 @@ def additional_click(*args):
         large_window.attributes('-topmost', True)
         large_window.title('Market Info')
 
-        large_label = tk.Label(large_window, font=("Courier", 12), justify='left', text='', fg='green', bg='black')
+        large_label = tk.Label(large_window, font=("Courier", settings['font_size']), justify='left', text='', fg='green', bg='black')
         large_label.pack(anchor='w')
         large_window.protocol("WM_DELETE_WINDOW", _large_window_on_close)
 

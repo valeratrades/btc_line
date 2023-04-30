@@ -192,10 +192,15 @@ def large_config(config):
         large_window.geometry(f"{width}x{height}")
 #---------------------------------------------------------- 
 
-def SPY_click():
-    global SPY_window
-    SPY_window.lower()
-    SPY_window.after(3000, SPY_window.lift)
+def lower_window(window):
+    def lower_and_raise():
+        window.attributes('-topmost', False)
+        window.lower()
+        time.sleep(3)
+        window.attributes('-topmost', True)
+        window.lift()
+
+    threading.Thread(target=lower_and_raise, daemon=True).start()
 def SPY_show(state):
     global SPY_window, SPY_label
     if SPY_window is None:
@@ -206,7 +211,7 @@ def SPY_show(state):
         SPY_window.overrideredirect(True)
         SPY_window.attributes('-topmost', True)
 
-        SPY_label = tk.Button(SPY_window, font="Adobe 12", text='', fg='green', bg='black', command=SPY_click)
+        SPY_label = tk.Button(SPY_window, font="Adobe 12", text='', fg='green', bg='black', command=lambda: lower_window(SPY_window))
         SPY_label.pack(anchor='w')
     output = f"{round(state, 2)}"
     output = output+'0' if len(output) <6 else output
@@ -227,7 +232,7 @@ def additional_click(*args):
         large_window.attributes('-topmost', True)
         large_window.title('Market Info')
 
-        large_label = tk.Label(large_window, font=("Courier", settings['font_size']), justify='left', text='', fg='green', bg='black')
+        large_label = tk.Button(large_window, font=("Courier", settings['font_size']), justify='left', text='', fg='green', bg='black', command=lambda: lower_window(large_window)) # using lambda: because the command= expects a function with no arguments
         large_label.pack(anchor='w')
         large_window.protocol("WM_DELETE_WINDOW", _large_window_on_close)
 

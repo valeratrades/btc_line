@@ -3,13 +3,14 @@ from alpaca_trade_api.stream import Stream
 
 log = logging.getLogger(__name__)
 
-script_dir = os.path.dirname(os.path.realpath(__file__))
-keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
+tempdir = tempfile.gettempdir()
+
+keys = json.load(open(os.path.join(tempdir, 'keys.json'), 'r'))
 API_KEY = keys['alpaca']['key']
 API_SECRET = keys['alpaca']['secret']
 os.environ['APCA_API_KEY_ID'] = API_KEY
 os.environ['APCA_API_SECRET_KEY'] = API_SECRET
-tempdir = tempfile.gettempdir()
+
 shared_data_path = os.path.join(tempdir, 'spy_feed.json')
 
 async def dump_data(t):

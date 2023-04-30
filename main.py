@@ -28,9 +28,12 @@ SPY_window = None
 update_ids = []
 tempdir = tempfile.gettempdir()
 json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
-keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
-json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
 display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
+try:
+    keys = json.load(open(os.path.join(script_dir, 'my_keys.json'), 'r'))
+except:
+    keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
+json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
 
 def sigterm_handler(signum, frame):
     global process

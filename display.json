@@ -10,7 +10,7 @@
                 "pos": 1
             },
             "Volatility": {
-                "text": "__Vol; (BVOL, VIX):",
+                "text": "__Vol; (VIX, ... BVOL, etc soon):",
                 "pos": 0
             }
         }

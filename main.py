@@ -24,6 +24,7 @@ large_dimensions = (420, 220)
 buffer_longs = ""
 additional_line = None
 large_window = None
+settings_button = None
 SPY_window = None
 update_ids = []
 tempdir = tempfile.gettempdir()
@@ -144,8 +145,7 @@ def update():
                 futures = [executor.submit(large_window_queue, script) for script in scripts]
                 concurrent.futures.wait(futures)
 
-            data = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))
-            large_config(data)
+            large_config()
 
     additional_button_thread = threading.Thread(target=update_additional_line, daemon=True)
     large_window_thread = threading.Thread(target=update_large_window, daemon=True)
@@ -176,19 +176,22 @@ def additional_config(*args):
     text = f"{longs}*{open_interest}"
     if additional_line is not None:
         additional_button.config(text=text)
-def large_config(config):
-    global large_window, large_label, settings, display
+def large_config():
+    global large_window, large_label, display
+    config = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))
+    settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
     labels = display['large_window']['labels']
-    text = ""
+    text = " " # dealing with the settings icon
     for component in config:
-        lines = config[component].splitlines()
-        if settings['label_data']:
-            lines.insert(labels[component]['pos'], labels[component]['text'])
-        text+= "\n".join(lines)
-        text+= "\n"
+        if settings['large_window'][component]:
+            lines = config[component].splitlines()
+            if settings['label_data']:
+                lines.insert(labels[component]['pos'], labels[component]['text'])
+            text+= "\n".join(lines)
+            text+= "\n"
     text = text[:-1] if text.endswith('\n') else text
     if large_window is not None:
-        large_label.config(text=text)
+        large_label.config(text=text, font=("Courier", settings['font_size']))
 
         width = large_label.winfo_reqwidth()
         height = large_label.winfo_reqheight()
@@ -200,8 +203,11 @@ def lower_window(window):
         window.attributes('-topmost', False)
         window.lower()
         time.sleep(3)
-        window.attributes('-topmost', True)
-        window.lift()
+        try: # we might've closed the window during the sleep
+            window.attributes('-topmost', True)
+            window.lift()
+        except:
+            pass
 
     threading.Thread(target=lower_and_raise, daemon=True).start()
 def SPY_show(state):
@@ -222,10 +228,13 @@ def SPY_show(state):
     SPY_window.lift()
 
 def _large_window_on_close():
-    global large_window, large_label, settings
+    global large_window, large_label, settings, settings_button
     if large_window is not None:
         large_window.destroy()
         large_window = None
+    if settings_button is not None:
+        settings_button.destroy()
+        settings_button = None
 def additional_click(*args):
     global large_window, large_label
     if large_window is None:
@@ -237,10 +246,16 @@ def additional_click(*args):
 
         large_label = tk.Button(large_window, font=("Courier", settings['font_size']), justify='left', text='', fg='green', bg='black', command=lambda: lower_window(large_window)) # using lambda: because the command= expects a function with no arguments
         large_label.pack(anchor='w')
+
+        from settings_button import create_settings_button, open_settings_window
+        global settings_button
+        settings_button = create_settings_button(large_window)
+        settings_button.config(command=lambda: open_settings_window(large_config))
+
         large_window.protocol("WM_DELETE_WINDOW", _large_window_on_close)
 
         """TODO: also open scrolling window for the volumes script (change it so it a) plots logarithmic
-                values, b) has bg='whit' c) move to negative coordinates, so opens only if there is a 
+                values, b) has bg='white' c) move to negative coordinates, so opens only if there is a 
                 second monitor connected on the left d) modify the code, so we 1) approximate function
                 of average daily volume depending on MC 2) include this market-general calculation
                 into the script."""

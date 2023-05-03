@@ -181,7 +181,7 @@ def large_config():
     config = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))
     settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
     labels = display['large_window']['labels']
-    text = " " # dealing with the settings icon
+    text = ""
     for component in config:
         if settings['large_window'][component]:
             lines = config[component].splitlines()
@@ -190,6 +190,7 @@ def large_config():
             text+= "\n".join(lines)
             text+= "\n"
     text = text[:-1] if text.endswith('\n') else text
+    text = ' ' + text if not text.startswith(' ') else text # dealing with the settings icon
     if large_window is not None:
         large_label.config(text=text, font=("Courier", settings['font_size']))
 

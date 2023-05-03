@@ -5,6 +5,10 @@ settings = {
     "comparison_limit": 1, # all comparisons will be done against the value {limit} hours ago.
     "label_data": True,
     "font_size": 12, # practically sets size of the big windows.
+    "additional_line": {
+        "OI": True,
+        "volume": True
+    },
     "large_window": {
         "LSRoutliers": True,
         "CMEpositions": True,
@@ -73,6 +77,31 @@ def connect_to_binance():
             time.sleep(1)
 #---------------------------------------------------------- 
 
+def format_now_then(now, then, dot=0):
+    settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
+
+    now = float(now)
+    change = now - float(then)
+
+    now = str(round(now, dot))
+    if len(now) == 1:
+        now += '.00'
+    if len(now) == 3:
+        now += '0'
+
+    change = round(change, dot)
+    change = f"{change:+}"
+    change = change[0]+change[2:] if change[1] == '0' else change
+
+    if dot <= 0:
+        cut = -2+dot
+        now = now[:cut]
+        change = change[:cut]
+
+    format = f"{now}{change}" if settings['comparison_limit'] else f"{now}"
+    return format
+
+
 def get_percent_longs(symbol='btc', type='global'):
     symbol = symbol.upper()+'USDT'
     type = ('global', 'Account') if type == 'global' else ('top', 'Position')
@@ -88,46 +117,48 @@ def get_percent_longs(symbol='btc', type='global'):
     except Exception as e:
         print(f"Error getting LSR: {e}")
         return None
-    
-def get_open_interest(symbol='btc'):
-    symbol = symbol.upper()+'USDT'
-    limit = settings['comparison_limit']
-    try:
-        r = requests.get(f"https://fapi.binance.com/futures/data/openInterestHist?symbol={symbol}&period=5m&limit={limit*12+1}").json()
-        def extract(i):
-            open_interest = float(r[i]['sumOpenInterestValue'])
-            open_interest = str(round(open_interest))
-            open_interest = f"{open_interest[:-6]}"
-            return float(open_interest)
-
-        diff = extract(-1) - extract(0)
-        # in second position is change from same time {limit} hours ago
-        return f"{round(extract(-1))}{round(diff):+}M"
-    except Exception as e:
-        print(f"Error getting open interest: {e}")
-        return None
 
 first_update = True
 def update():
     global additional_line, large_window
     global buffer_longs, update_ids, process, first_update
+    settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
     call = get_percent_longs()
     if not call is None:
         buffer_longs = call
     #---------------------------------------------------------- 
 
     def additional_line_queue():
-        longs = get_percent_longs(type='top')
-        open_interest = get_open_interest()
-        return longs, open_interest
+        longs = f"{get_percent_longs(type='top')}*"
+        open_interest = ''
+        if settings['additional_line']['OI']:
+            from additional_line import get_open_interest
+            tuple = get_open_interest(settings)
+            open_interest = f"{format_now_then(tuple[0], tuple[1])}M"
+        volume = ',V:' if settings['label_data'] else ','
+        if settings['additional_line']['volume']:
+            from additional_line import get_volume
+            tuple = get_volume(settings)
+            volume += f"{format_now_then(tuple[0], tuple[1], -6)}M" 
+        return longs, open_interest, volume
 
     def update_additional_line():
         if additional_line is not None:
             global additional_button
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(additional_line_queue)
-                longs, open_interest = future.result()
-            additional_config(longs, open_interest)
+                array = future.result()
+
+            text = ''
+            for element in array:
+                text += f"{element}"
+            if additional_line is not None:
+                global additional_button
+                additional_button.config(text=text)
+
+                width = additional_button.winfo_reqwidth()
+                height = additional_line.winfo_height()
+                additional_line.geometry(f"{width}x{height}")
 
     def large_window_queue(script_path):
         try:
@@ -168,14 +199,7 @@ def update():
     if schedule:
         update_ids.append(root.after(60000, update))
     first_update = False
-
-def additional_config(*args):
-    global additional_line, additional_button
-    longs, open_interest = args
-
-    text = f"{longs}*{open_interest}"
-    if additional_line is not None:
-        additional_button.config(text=text)
+    
 def large_config():
     global large_window, large_label, display
     config = json.load(open(os.path.join(tempdir, 'large_window.json'), 'r'))

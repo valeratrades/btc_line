@@ -25,7 +25,7 @@ def update_settings(callback=None):
     for widget_name, widget in settings_window.children.items():
         if isinstance(widget, tk.Label):
             label_text = widget.cget('text')
-            label = label_text.strip(' :')
+            label = label_text.strip('\n :')
         if isinstance(widget, tk.Checkbutton):
             key = label
             value = widget_vars[key]
@@ -73,9 +73,11 @@ def open_settings_window(callback=None):
             widget.set(value)
             widget.grid(row=row, column=1)
         elif isinstance(value, dict):
+            separator = '\n'
             for subkey, subvalue in value.items():
-                sublabel = tk.Label(settings_window, text="    " + subkey + ":")
+                sublabel = tk.Label(settings_window, text=separator + "    " + subkey + ":")
                 sublabel.grid(row=row, column=0, sticky="w")
+                separator = ''
                 if isinstance(subvalue, bool):
                     subvar = tk.BooleanVar(value=subvalue)
                     subwidget = tk.Checkbutton(settings_window, variable=subvar)

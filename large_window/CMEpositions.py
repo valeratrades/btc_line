@@ -1,6 +1,7 @@
 import requests, tempfile, json, os
 
 tempdir = tempfile.gettempdir()
+settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
 
 response = requests.get("https://www.cftc.gov/dea/futures/financial_lf.htm")
 
@@ -42,8 +43,8 @@ def format(numbers):
     def show_change(index):
         return f"{numbers[0][index]}{numbers[1][index]:+}"
     
-    long = show_change(0)
-    short = show_change(1)
+    long = show_change(0) if settings['comparison_limit'] else str(numbers[0][0])
+    short = show_change(1) if settings['comparison_limit'] else str(numbers[0][1])
     return f"({long}, {short})"
 
 from_date = find_date()

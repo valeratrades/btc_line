@@ -69,7 +69,7 @@ def open_settings_window(callback=None):
             widget.grid(row=row, column=1)
             widget_vars[key] = var
         elif isinstance(value, int):
-            widget = tk.Scale(settings_window, from_=1, to=24, orient="horizontal", length=200)
+            widget = tk.Scale(settings_window, from_=0, to=24, orient="horizontal", length=200)
             widget.set(value)
             widget.grid(row=row, column=1)
         elif isinstance(value, dict):

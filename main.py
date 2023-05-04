@@ -7,7 +7,7 @@ settings = {
     "font_size": 12, # practically sets size of the big windows.
     "additional_line": {
         "OI": True,
-        "volume": True
+        "volume": False
     },
     "large_window": {
         "LSRoutliers": True,
@@ -31,6 +31,7 @@ large_window = None
 settings_button = None
 SPY_window = None
 update_ids = []
+large_resize_ids = []
 tempdir = tempfile.gettempdir()
 json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
 display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
@@ -135,8 +136,9 @@ def update():
             from additional_line import get_open_interest
             tuple = get_open_interest(settings)
             open_interest = f"{format_now_then(tuple[0], tuple[1])}M"
-        volume = ',V:' if settings['label_data'] else ','
+        volume = ''
         if settings['additional_line']['volume']:
+            volume = ',V:' if settings['label_data'] else ','
             from additional_line import get_volume
             tuple = get_volume(settings)
             volume += f"{format_now_then(tuple[0], tuple[1], -6)}M" 
@@ -252,6 +254,23 @@ def SPY_show(state):
     SPY_label.config(text=f"{round(state, 2)}")
     SPY_window.lift()
 
+def settings_on_save():
+    large_config()
+    update()
+def _large_on_resize():
+    global large_window, large_label, large_last_resize_timestamp, large_creation_timestamp
+    settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
+    if large_window is not None and time.time() - large_last_resize_timestamp > 0.5 and time.time() - large_creation_timestamp > 5:
+        reqwidth = large_label.winfo_reqwidth()
+        reqheight = large_label.winfo_reqheight()
+        width_change = large_window.winfo_width()/reqwidth
+        height_change = large_window.winfo_height()/reqheight
+        change_font = round(settings['font_size'] * min(width_change, height_change))
+        if change_font != settings['font_size']:
+            settings['font_size'] = change_font
+            json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
+            large_last_resize_timestamp = time.time()
+            large_config()
 def _large_window_on_close():
     global large_window, large_label, settings, settings_button
     if large_window is not None:
@@ -261,7 +280,7 @@ def _large_window_on_close():
         settings_button.destroy()
         settings_button = None
 def additional_click(*args):
-    global large_window, large_label
+    global large_window, large_label, large_last_resize_timestamp, large_creation_timestamp
     if large_window is None:
         large_window = tk.Toplevel(root)
         large_window.config(bg='black')
@@ -271,13 +290,25 @@ def additional_click(*args):
 
         large_label = tk.Button(large_window, font=("Courier", settings['font_size']), justify='left', text='', fg='green', bg='black', command=lambda: lower_window(large_window)) # using lambda: because the command= expects a function with no arguments
         large_label.pack(anchor='w')
+        large_last_resize_timestamp = time.time()
+        large_creation_timestamp = time.time()
 
         from settings_button import create_settings_button, open_settings_window
         global settings_button
         settings_button = create_settings_button(large_window)
-        settings_button.config(command=lambda: open_settings_window(large_config))
+        settings_button.config(command=lambda: open_settings_window(settings_on_save))
+
+        def on_resize(*args):
+            global large_resize_ids
+            schedule = True if len(large_resize_ids) < 2 else False
+            if len(large_resize_ids) != 0:
+                large_resize_ids.pop(0)
+            if schedule:
+                large_resize_ids.append(large_window.after(1000, _large_on_resize))
+            
 
         large_window.protocol("WM_DELETE_WINDOW", _large_window_on_close)
+        large_window.bind("<Configure>", on_resize)
 
         """TODO: also open scrolling window for the volumes script (change it so it a) plots logarithmic
                 values, b) has bg='white' c) move to negative coordinates, so opens only if there is a 

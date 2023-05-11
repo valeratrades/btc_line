@@ -95,7 +95,7 @@ def format_now_then(now, then, dot=0):
         now = now[:cut]
         change = change[:cut]
     if len(change) == 1: # meaning it is just '+' or '-', because actual value of 0 has been cut out
-        change = '+0'
+        change = '~0'
 
     format = f"{now}{change}" if settings['comparison_limit'] else f"{now}"
     return format
@@ -117,9 +117,10 @@ def get_percent_longs(symbol='btc', type='global'):
         print(f"Error getting LSR: {e}")
         return None
 
+first_update = True
 def update():
     global additional_line, large_window
-    global buffer_longs, process
+    global buffer_longs, process, first_update
     settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
     call = get_percent_longs()
     if not call is None:
@@ -199,6 +200,7 @@ def update():
         except:
             pass
         process = subprocess.Popen(['python', 'streamSPY.py', 'main'])
+    first_update = False
 
 def schedule_update():
     global root

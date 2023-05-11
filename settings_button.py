@@ -33,7 +33,11 @@ def update_settings(callback=None):
                 settings = find(key, value.get())
         if isinstance(widget, tk.Scale):
             settings = find(label, widget.get())
-    
+        
+    apply_changes(settings, callback)
+
+
+def apply_changes(settings, callback=None):
     json.dump(settings, open(os.path.join(tempdir, "settings.json"), 'w'))
     close_settings_window()
     if callback is not None:
@@ -96,6 +100,11 @@ def open_settings_window(callback=None):
 
     save_button = tk.Button(settings_window, text="Save", command=lambda: update_settings(callback))
     save_button.grid(row=row, column=0, columnspan=2)
+    current_font = save_button.cget("font")
+    fontsize = save_button.tk.call("font", "actual", current_font, "-size")
+    default_settings = json.load(open(os.path.join(script_dir, 'display.json')))['default_settings']
+    reset_button = tk.Button(settings_window, text="Reset", font=(current_font, int(fontsize * 2 / 3)), command=lambda: apply_changes(default_settings, callback))
+    reset_button.grid(row=row, column=0, padx=0, pady=0)
 
 def create_settings_button(master):
     gear_icon = tk.PhotoImage(file=os.path.join(script_dir, "settings-icon.png"))

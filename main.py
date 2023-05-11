@@ -1,20 +1,7 @@
-import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal
+import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal, inspect
 import tkinter as tk
 
-settings = {
-    "comparison_limit": 1, # all comparisons will be done against the value {limit} hours ago.
-    "label_data": True,
-    "font_size": 12, # practically sets size of the big windows.
-    "additional_line": {
-        "OI": True,
-        "volume": False
-    },
-    "large_window": {
-        "LSRoutliers": True,
-        "CMEpositions": True,
-        "Volatility": True
-    }
-}
+debug = True
 #==========================================================
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,16 +12,25 @@ sys.path.append(script_dir)
 additional_width = 120
 SPY_width = 52
 large_dimensions = (420, 220)
-buffer_longs = ""
+buffer_longs = ""   
 additional_line = None
 large_window = None
 settings_button = None
 SPY_window = None
-update_ids = []
 large_resize_ids = []
 tempdir = tempfile.gettempdir()
-json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
 display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
+#<settings>
+default_settings = display['default_settings']
+def reset_settings():
+    json.dump(default_settings, open(os.path.join(tempdir, 'settings.json'), 'w'))
+if not os.path.exists(os.path.join(tempdir, 'settings.json')):
+    reset_settings()
+settings = json.load(open(os.path.join(tempdir, 'settings.json')))
+if not settings.keys() == default_settings.keys():
+    reset_settings()
+settings = json.load(open(os.path.join(tempdir, 'settings.json')))
+#</settings>
 try:
     keys = json.load(open(os.path.join(script_dir, 'my_keys.json'), 'r'))
 except:
@@ -98,6 +94,8 @@ def format_now_then(now, then, dot=0):
         cut = -2+dot
         now = now[:cut]
         change = change[:cut]
+    if len(change) == 1: # meaning it is just '+' or '-', because actual value of 0 has been cut out
+        change = '+0'
 
     format = f"{now}{change}" if settings['comparison_limit'] else f"{now}"
     return format
@@ -119,14 +117,20 @@ def get_percent_longs(symbol='btc', type='global'):
         print(f"Error getting LSR: {e}")
         return None
 
-first_update = True
 def update():
     global additional_line, large_window
-    global buffer_longs, update_ids, process, first_update
+    global buffer_longs, process
     settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
     call = get_percent_longs()
     if not call is None:
         buffer_longs = call
+
+    if debug:
+        current_frame = inspect.currentframe()
+        caller_frame = inspect.getouterframes(current_frame, 2)
+        caller = caller_frame[1][3]
+        if not caller == 'schedule_update':
+            print(f"DEBUG: update() called by {caller}")
     #---------------------------------------------------------- 
 
     def additional_line_queue():
@@ -195,12 +199,11 @@ def update():
         except:
             pass
         process = subprocess.Popen(['python', 'streamSPY.py', 'main'])
-    schedule = True if len(update_ids) < 2 else False
-    if len(update_ids) != 0:
-        update_ids.pop(0)
-    if schedule:
-        update_ids.append(root.after(60000, update))
-    first_update = False
+
+def schedule_update():
+    global root
+    update()
+    root.after(60000, schedule_update)
     
 def large_config():
     global large_window, large_label, display
@@ -251,7 +254,7 @@ def SPY_show(state):
         SPY_label.pack(anchor='w')
     output = f"{round(state, 2)}"
     output = output+'0' if len(output) <6 else output
-    SPY_label.config(text=f"{round(state, 2)}")
+    SPY_label.config(text=output)
     SPY_window.lift()
 
 def settings_on_save():
@@ -364,5 +367,5 @@ for key in settings['large_window'].keys():
         large_window_config[key] = ''
 json.dump(large_window_config, open(os.path.join(tempdir,'large_window.json'), 'w'))
 
-root.after(0, update)
+root.after(0, schedule_update)
 root.mainloop()

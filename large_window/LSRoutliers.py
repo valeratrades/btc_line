@@ -12,7 +12,7 @@ futures_pairs = []
 for chunk in exchangeInfo['symbols']:
     if chunk["symbol"][-1] == "T":
         futures_pairs.append(chunk["symbol"])
-toRemove = ["BTCSTUSDT", "BTCDOMUSDT"]
+toRemove = ["BTCSTUSDT", "BTCDOMUSDT", "USDCUSDT"]
 for symbol in toRemove:
     try:
         futures_pairs.remove(symbol)

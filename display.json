@@ -16,7 +16,7 @@
     "large_window": {
         "labels": {
             "LSRoutliers": {
-                "text": "Most Longed:          Most Shorted:",
+                "text": "Most Longed:       Most Shorted:",
                 "pos": 0
             },
             "CMEpositions": {

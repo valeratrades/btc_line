@@ -92,12 +92,9 @@ async def main(symbols):
             s_symbol, s_format = extract_values(r)
             l_symbol, l_format = extract_values(-r-1)
 
-            l_spaces = ' ' * 5 if limit==0 else ' ' * 2
-            s_spaces = ' ' * 7 if limit==0 else ' ' * 2
 
-
-            second_row = f"{s_spaces}├{s_symbol:<9} {s_format}" if r < most_shorted else ''
-            result_string += f"{l_spaces}├{l_symbol:<9} {l_format:<8}{second_row}\n"
+            second_row = f"  ├{s_symbol:<9} {s_format}" if r < most_shorted else ''
+            result_string += f"  ├{l_symbol:<9} {l_format:<8}{second_row}\n"
         result_string = result_string[:-1]
         
         large_window = json.load(open(os.path.join(tempdir,'large_window.json'), 'r'))

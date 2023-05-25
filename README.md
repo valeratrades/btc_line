@@ -1,3 +1,9 @@
+# Setup
+## Windows
+...
+## Not Windows
+Good luck.
+
 For SPY window to work you will have to get your demo api keys on https://app.alpaca.markets/paper/dashboard/overview -> API Keys, and put them into keys.json
 Same for twelvedata
 

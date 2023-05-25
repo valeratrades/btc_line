@@ -4,6 +4,8 @@ import tkinter as tk
 tempdir = tempfile.gettempdir()
 script_dir = os.path.dirname(os.path.realpath(__file__))
 settings = json.load(open(os.path.join(tempdir, "settings.json"), 'r'))
+with open(os.path.join(tempdir, 'src.txt'), 'r') as f:
+    src_dir = f.read()
 
 settings_window = None
 
@@ -107,7 +109,7 @@ def open_settings_window(callback=None):
     reset_button.grid(row=row, column=0, padx=0, pady=0)
 
 def create_settings_button(master):
-    gear_icon = tk.PhotoImage(file=os.path.join(script_dir, "settings-icon.png"))
+    gear_icon = tk.PhotoImage(file=os.path.join(src_dir, 'icons/gear.png'))
     gear_icon = gear_icon.subsample(gear_icon.width() // 17, gear_icon.height() // 17)
     settings_button = tk.Button(master, image=gear_icon, bg='black', padx=0, pady=0, borderwidth=0, command=open_settings_window)
     settings_button.image = gear_icon

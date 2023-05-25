@@ -1,5 +1,6 @@
 import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal, inspect
 import tkinter as tk
+from PIL import Image, ImageTk
 
 debug = True
 #==========================================================
@@ -17,9 +18,14 @@ additional_line = None
 large_window = None
 settings_button = None
 SPY_window = None
+MS_button = None
+MS_plot = None
 large_resize_ids = []
 tempdir = tempfile.gettempdir()
-display = json.load(open(os.path.join(script_dir, 'display.json'), 'r'))
+src_dir = os.path.join(script_dir, 'src')
+with open(os.path.join(tempdir, 'src.txt'), 'w') as f:
+    f.write(src_dir)
+display = json.load(open(os.path.join(src_dir, 'display.json'), 'r'))
 #<settings>
 default_settings = display['default_settings']
 def reset_settings():
@@ -36,6 +42,8 @@ try:
 except:
     keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
 json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
+allListed = json.load(open(os.path.join(src_dir, 'allListed.json'), 'r'))
+json.dump(allListed, open(os.path.join(tempdir, 'allListed.json'), 'w'))
 
 def sigterm_handler(signum, frame):
     global process
@@ -118,9 +126,10 @@ def get_percent_longs(symbol='btc', type='global'):
         return None
 
 first_update = True
+update_counter = 0
 def update():
     global additional_line, large_window
-    global buffer_longs, process, first_update
+    global buffer_longs, process, first_update, update_counter
     settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
     call = get_percent_longs()
     if not call is None:
@@ -138,13 +147,13 @@ def update():
         longs = f"{get_percent_longs(type='top')}*"
         open_interest = ''
         if settings['additional_line']['OI']:
-            from additional_line import get_open_interest
+            from src.additional_line import get_open_interest
             tuple = get_open_interest(settings)
             open_interest = f"{format_now_then(tuple[0], tuple[1])}M"
         volume = ''
         if settings['additional_line']['volume']:
             volume = ',V:' if settings['label_data'] else ','
-            from additional_line import get_volume
+            from src.additional_line import get_volume
             tuple = get_volume(settings)
             volume += f"{format_now_then(tuple[0], tuple[1], -6)}M" 
         return longs, open_interest, volume
@@ -175,7 +184,7 @@ def update():
 
     def update_large_window():
         if large_window is not None:
-            large_window_dir =  os.path.join(script_dir, "large_window")
+            large_window_dir =  os.path.join(src_dir, "large_window")
             global large_window_config
             scripts = [os.path.join(large_window_dir, f) for f in os.listdir(large_window_dir) if (f.endswith(".py") and f[:-3] in large_window_config)]
 
@@ -199,8 +208,12 @@ def update():
             print('streamSPY died; rebooting...')
         except:
             pass
-        process = subprocess.Popen(['python', 'streamSPY.py', 'main'])
+        process = subprocess.Popen(['python', 'src/streamSPY.py', 'main'])
     first_update = False
+    update_counter += 1
+    if update_counter == 15:
+        update_counter = 0
+        subprocess.Popen(['python', 'src/MarketStructure.py', 'main'])
 
 def schedule_update():
     global root
@@ -277,13 +290,34 @@ def _large_on_resize():
             large_last_resize_timestamp = time.time()
             large_config()
 def _large_window_on_close():
-    global large_window, large_label, settings, settings_button
+    global large_window, large_label, settings, settings_button, MS_button
     if large_window is not None:
         large_window.destroy()
         large_window = None
     if settings_button is not None:
         settings_button.destroy()
         settings_button = None
+    if MS_button is not None:
+        MS_button.destroy()
+        MS_button = None
+def MS_button_on_click():
+    global MS_button, MS_plot
+    if MS_plot is None:
+        img = Image.open(os.path.join(tempdir, 'MarketStructure.png'))
+        tk_img = ImageTk.PhotoImage(img)
+        MS_plot = tk.Label(MS_button, image=tk_img)
+        MS_plot.pack()
+    else:
+        MS_plot.destroy()
+        MS_plot = None
+def create_MS_button(master):
+    global MS_button
+    if MS_button is None:
+        icon = tk.PhotoImage(file=os.path.join(src_dir, 'icons/ms.png'))
+        icon = icon.subsample(icon.width() // 17, icon.height() // 17)
+        MS_button = tk.Button(master, image=icon, bg='black', padx=0, pady=0, borderwidth=0, command=MS_button_on_click)
+        MS_button.image = icon
+        MS_button.place(x=0, y=17, width=17, height=17)
 def additional_click(*args):
     global large_window, large_label, large_last_resize_timestamp, large_creation_timestamp
     if large_window is None:
@@ -298,10 +332,14 @@ def additional_click(*args):
         large_last_resize_timestamp = time.time()
         large_creation_timestamp = time.time()
 
-        from settings_button import create_settings_button, open_settings_window
+        from src.settings_button import create_settings_button, open_settings_window
         global settings_button
         settings_button = create_settings_button(large_window)
         settings_button.config(command=lambda: open_settings_window(settings_on_save))
+
+        create_MS_button(large_window)
+        if settings['MarketStructure'] == True:
+            MS_button_on_click()
 
         def on_resize(*args):
             global large_resize_ids
@@ -362,12 +400,13 @@ main_button.pack()
 t = threading.Thread(target=connect_to_binance)
 t.daemon = True
 t.start()
-process = subprocess.Popen(['python', 'streamSPY.py', 'main'])
+process = subprocess.Popen(['python', 'src/streamSPY.py', 'main'])
 large_window_config = {}
 for key in settings['large_window'].keys():
     if settings['large_window'][key] == True:
         large_window_config[key] = ''
 json.dump(large_window_config, open(os.path.join(tempdir,'large_window.json'), 'w'))
+subprocess.Popen(['python', 'src/MarketStructure.py', 'main'])
 
 root.after(0, schedule_update)
 root.mainloop()

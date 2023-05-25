@@ -82,7 +82,7 @@ def plot_market_structure(symbols):
             x=normalized_df.index,
             y=normalized_df['BTCUSDT'],
             mode='lines',
-            name='BTCUSDT',
+            name='~~BTC~~',
             line=dict(width=5, color='gold'),
             showlegend=True
         )

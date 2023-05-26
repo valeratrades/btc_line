@@ -1,13 +1,20 @@
 # Setup
 ## Windows
-...
+>git clone https://github.com/Valera6/BTCLine
+
+>open keys.json
+>go to https://app.alpaca.markets/paper/dashboard/overview, get your keys for alpaca, replace the test ones
+>go to https://twelvedata.com/register, get your keys for twelvedate, replace the test ones
+
+>make a shortcut of main.py, place into shell:startup
 ## Not Windows
 Good luck.
-
-For SPY window to work you will have to get your demo api keys on https://app.alpaca.markets/paper/dashboard/overview -> API Keys, and put them into keys.json
-Same for twelvedata
-
-Script shows f"{BTC_price}|{%longs}" always.
+# Usage
+Script shows BTC price and %longs always.
 If keys are connected, automatically adds a line for SPY on market open.
-When main window clicked, adds another line with f"{%longs_topAccounts}{OI}+{OIchange-in-userChosenTF_defalt1h}
+
+When main window clicked, adds another line with %longs_topAccounts, OI, OIchange
+
 When additional line clicked, creates a window with LSR outliers, CME positions, some Volatility metrics and other fun stuff in the future.
+
+Custom settings are available using the icon on the large window (click main > click additional >)

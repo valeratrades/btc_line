@@ -18,13 +18,11 @@ additional_line = None
 large_window = None
 settings_button = None
 SPY_window = None
-MS_button = None
-MS_plot = None
+MS_window = None
 large_resize_ids = []
 tempdir = tempfile.gettempdir()
 src_dir = os.path.join(script_dir, 'src')
-with open(os.path.join(tempdir, 'src.txt'), 'w') as f:
-    f.write(src_dir)
+os.environ['SRC_DIR'] = src_dir
 display = json.load(open(os.path.join(src_dir, 'display.json'), 'r'))
 #<settings>
 default_settings = display['default_settings']
@@ -276,19 +274,21 @@ def settings_on_save():
     large_config()
     update()
 def _large_on_resize():
-    global large_window, large_label, large_last_resize_timestamp, large_creation_timestamp
+    global large_window, large_label
     settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
-    if large_window is not None and time.time() - large_last_resize_timestamp > 0.5 and time.time() - large_creation_timestamp > 5:
+    if large_label.cget('text') == '':
+        pass
+    else:
         reqwidth = large_label.winfo_reqwidth()
         reqheight = large_label.winfo_reqheight()
         width_change = large_window.winfo_width()/reqwidth
         height_change = large_window.winfo_height()/reqheight
-        change_font = round(settings['font_size'] * min(width_change, height_change))
+        change_font = round(settings['font_size'] * max(width_change, height_change))
         if change_font != settings['font_size']:
             settings['font_size'] = change_font
             json.dump(settings, open(os.path.join(tempdir,'settings.json'), 'w'))
-            large_last_resize_timestamp = time.time()
             large_config()
+    MS_plot_resize()
 def _large_window_on_close():
     global large_window, large_label, settings, settings_button, MS_button
     if large_window is not None:
@@ -297,27 +297,57 @@ def _large_window_on_close():
     if settings_button is not None:
         settings_button.destroy()
         settings_button = None
-    if MS_button is not None:
-        MS_button.destroy()
-        MS_button = None
-def MS_button_on_click():
-    global MS_button, MS_plot
-    if MS_plot is None:
-        img = Image.open(os.path.join(tempdir, 'MarketStructure.png'))
+    close_MS()
+def close_MS():
+    global MS_window, MS_plot
+    if MS_window:
+        MS_plot.pack_forget()
+        MS_window.destroy()
+        MS_window = None
+def MS_plot_resize():
+    global MS_window, MS_plot, large_window
+    if MS_window:
+        img = MS_window.img
+        ratio = img.width / img.height
+        large_window.update()
+        geometry_str = large_window.winfo_geometry()
+        l_width = int(geometry_str.split('x')[0])
+        l_height = int(geometry_str.split('x')[1].split('+')[0])
+        l_x = int(geometry_str.split('+')[1])
+        l_y = int(geometry_str.split('+')[2])
+
+        ms_width = l_width
+        ms_height = int(ms_width / ratio)
+        img = img.resize((ms_width, ms_height))
         tk_img = ImageTk.PhotoImage(img)
-        MS_plot = tk.Label(MS_button, image=tk_img)
+
+        MS_window.geometry(f'{ms_width}x{ms_height}+{l_x+8}+{l_y+l_height+30}') # the additions are to account for the title (haven't found a built-in way)
+
+        MS_plot.configure(image=tk_img)
+        MS_plot.image = tk_img
+def MS_button_on_click():
+    global MS_window, MS_plot
+    if MS_window is None:
+        MS_window = tk.Toplevel(root)
+        MS_window.config(bg='black')
+        MS_window.resizable(0, 0)
+        MS_window.overrideredirect(True)
+        MS_window.attributes("-topmost", True)
+
+        MS_window.img = Image.open(os.path.join(tempdir, 'MarketStructure.png'))
+
+        MS_plot = tk.Button(MS_window, command=close_MS)
         MS_plot.pack()
+
+        MS_plot_resize()
     else:
-        MS_plot.destroy()
-        MS_plot = None
+        close_MS()
 def create_MS_button(master):
-    global MS_button
-    if MS_button is None:
-        icon = tk.PhotoImage(file=os.path.join(src_dir, 'icons/ms.png'))
-        icon = icon.subsample(icon.width() // 17, icon.height() // 17)
-        MS_button = tk.Button(master, image=icon, bg='black', padx=0, pady=0, borderwidth=0, command=MS_button_on_click)
-        MS_button.image = icon
-        MS_button.place(x=0, y=17, width=17, height=17)
+    icon = tk.PhotoImage(file=os.path.join(src_dir, 'icons/ms.png'))
+    icon = icon.subsample(icon.width() // 17, icon.height() // 17)
+    MS_button = tk.Button(master, image=icon, bg='black', padx=0, pady=0, borderwidth=0, command=MS_button_on_click)
+    MS_button.image = icon
+    MS_button.place(x=0, y=17, width=17, height=17)
 def additional_click(*args):
     global large_window, large_label, large_last_resize_timestamp, large_creation_timestamp
     if large_window is None:
@@ -329,8 +359,6 @@ def additional_click(*args):
 
         large_label = tk.Button(large_window, font=("Courier", settings['font_size']), justify='left', text='', fg='green', bg='black', command=lambda: lower_window(large_window)) # using lambda: because the command= expects a function with no arguments
         large_label.pack(anchor='w')
-        large_last_resize_timestamp = time.time()
-        large_creation_timestamp = time.time()
 
         from src.settings_button import create_settings_button, open_settings_window
         global settings_button
@@ -338,8 +366,6 @@ def additional_click(*args):
         settings_button.config(command=lambda: open_settings_window(settings_on_save))
 
         create_MS_button(large_window)
-        if settings['MarketStructure'] == True:
-            MS_button_on_click()
 
         def on_resize(*args):
             global large_resize_ids
@@ -359,9 +385,11 @@ def additional_click(*args):
                 of average daily volume depending on MC 2) include this market-general calculation
                 into the script."""
         update()
+        settings = json.load(open(os.path.join(tempdir, 'settings.json')))
+        if settings['MarketStructure'] == True:
+            MS_button_on_click()
     else:
-        large_window.destroy()
-        large_window = None
+        _large_window_on_close()
 
 def main_click(*args):
     global additional_line, additional_button, large_window

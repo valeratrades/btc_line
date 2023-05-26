@@ -4,8 +4,9 @@ import tkinter as tk
 tempdir = tempfile.gettempdir()
 script_dir = os.path.dirname(os.path.realpath(__file__))
 settings = json.load(open(os.path.join(tempdir, "settings.json"), 'r'))
-with open(os.path.join(tempdir, 'src.txt'), 'r') as f:
-    src_dir = f.read()
+src_dir = os.environ.get('SRC_DIR')
+# with open(os.path.join(tempdir, 'src.txt'), 'r') as f:
+#     src_dir = f.read()
 
 settings_window = None
 

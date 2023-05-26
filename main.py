@@ -351,6 +351,7 @@ def create_MS_button(master):
 def additional_click(*args):
     global large_window, large_label, large_last_resize_timestamp, large_creation_timestamp
     if large_window is None:
+        settings = json.load(open(os.path.join(tempdir, 'settings.json')))
         large_window = tk.Toplevel(root)
         large_window.config(bg='black')
         large_window.geometry(f'{large_dimensions[0]}x{large_dimensions[1]}+{main_line.winfo_x()+main_line.winfo_width()}+{main_line.winfo_y()+additional_line.winfo_height()}') 
@@ -385,7 +386,6 @@ def additional_click(*args):
                 of average daily volume depending on MC 2) include this market-general calculation
                 into the script."""
         update()
-        settings = json.load(open(os.path.join(tempdir, 'settings.json')))
         if settings['MarketStructure'] == True:
             MS_button_on_click()
     else:

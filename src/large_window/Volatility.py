@@ -55,7 +55,7 @@ async def get_VIX(session):
         last_close = await get_last_close()
         change = last_close - await get_then() if limit else None
         if change:
-            change = f" {round(change, 2):+}"
+            change = f"{round(change, 2):+}"
             if change[0] == '0':
                 change = change[1:]
         format = f"{last_close}{change}" if change else f"{last_close}"

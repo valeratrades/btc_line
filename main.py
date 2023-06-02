@@ -181,6 +181,7 @@ def update():
             print(f"Error executing {script_path}: {e}")
 
     def update_large_window():
+        MS_plot_resize()
         if large_window is not None:
             large_window_dir =  os.path.join(src_dir, "large_window")
             global large_window_config

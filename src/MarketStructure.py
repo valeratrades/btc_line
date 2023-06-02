@@ -1,5 +1,4 @@
-import pandas as pd
-import requests, json, threading, os, tempfile
+import requests, json, threading, os, tempfile, pandas as pd, numpy as np
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from IPython.display import Image
@@ -26,6 +25,7 @@ def get_historical_data(symbol):
     df['return'] = df['close'].pct_change() + 1
     df.iloc[0, df.columns.get_loc('return')] = 1 # set first datapoint to one
     df['cumulative_return'] = df['return'].cumprod()
+    df['variance'] = df['close'].var()
     return df
 
 
@@ -45,60 +45,64 @@ def plot_market_structure(symbols):
     for thread in threads:
         thread.join()
 
+    # <data-analysis>
     normalized_data = {symbol: df['close'] / df['close'].iloc[0] for symbol, df in data.items()}
     normalized_df = pd.DataFrame(normalized_data)
+    normalized_df = normalized_df.apply(np.log)
 
     performance = normalized_df.iloc[-1] - normalized_df.iloc[0]
     top_performers = performance.nlargest(5).index
     bottom_performers = performance.nsmallest(5).index
+    
+    mean_values = normalized_df.mean(axis=1)
+    deviations_df = normalized_df.sub(mean_values, axis=0)
+    flattened_deviations = deviations_df.values.flatten()
+    variance = np.var(flattened_deviations, ddof=1)
+    kurtosis = pd.Series(flattened_deviations).kurt()
+    
+    print(variance, kurtosis) #//
+    # </data-analysis>
 
     fig = go.Figure()
 
-    for column in normalized_df.columns:
-        if column not in top_performers and column not in bottom_performers and column != 'BTCUSDT':
-            fig.add_trace(
+    def add_trace(*args):
+        y, name, line, legend = args
+        fig.add_trace(
                 go.Scatter(
                     x=normalized_df.index,
-                    y=normalized_df[column],
+                    y=y,
                     mode='lines',
-                    name='',
-                    line=dict(width=1, color='grey'),
-                    showlegend=False
+                    name=name,
+                    line=line,
+                    showlegend=legend
                 )
             )
+    def add_performers(column):
+        symbol = column[:-4]
+        symbol.replace('1000', '', 1)
+        sign = f"{performance[column]:+}"[0]
+        change = f"{round(100*performance[column], 2):.2f}"
+        change = change[1:] if change[0]=='-' else change
+        name = f"{symbol:<5}{sign}{change:>5}%"
+        add_trace(normalized_df[column], name, dict(width=2), True)
+    def add_empty(name):
+        add_trace([1]*len(normalized_df.index), name, dict(width=0), True)
+        
+    # <plotting>
+    for column in normalized_df.columns:
+        if column not in top_performers and column not in bottom_performers and column != 'BTCUSDT':
+            add_trace(normalized_df[column], '', dict(width=1, color='grey'), False)
     for column in top_performers:
-        fig.add_trace(
-            go.Scatter(
-                x=normalized_df.index,
-                y=normalized_df[column],
-                mode='lines',
-                name=column,
-                line=dict(width=2),
-                showlegend=True
-            )
-        )
-    fig.add_trace(
-        go.Scatter(
-            x=normalized_df.index,
-            y=normalized_df['BTCUSDT'],
-            mode='lines',
-            name='~~BTC~~',
-            line=dict(width=5, color='gold'),
-            showlegend=True
-        )
-    )
+        add_performers(column)
+    add_trace(normalized_df['BTCUSDT'], f"~BTC~ {round(100*performance['BTCUSDT'], 2):>5}%", dict(width=5, color='gold'), True)
     for column in bottom_performers[::-1]:
-        fig.add_trace(
-            go.Scatter(
-                x=normalized_df.index,
-                y=normalized_df[column],
-                mode='lines',
-                name=column,
-                line=dict(width=2),
-                showlegend=True
-            )
-        )
-    fig.update_layout(template='plotly_dark', autosize=True, margin=dict(l=0, r=0, b=0, t=0))
+        add_performers(column)
+    add_empty('')
+    add_empty(f"V: {variance:.5f}")
+    add_empty(f"K: {round(kurtosis, 1)}")
+    # </plotting>
+    
+    fig.update_layout(template='plotly_dark', autosize=True, margin=dict(l=0, r=0, b=0, t=0), font={"family":"Courier New, monospace"})
     fig.update_xaxes(range=[normalized_df.index.min(), normalized_df.index.max()])
     fig.update_yaxes(range=[normalized_df.min().min(), normalized_df.max().max()])
 

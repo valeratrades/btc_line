@@ -60,6 +60,9 @@ def plot_market_structure(symbols):
     variance = np.var(flattened_deviations, ddof=1)
     kurtosis = pd.Series(flattened_deviations).kurt()
     
+    correlation_matrix = normalized_df.corr()
+    mean_correlation = correlation_matrix.mean().mean()  #! pretty sure this is a very shitty method
+    
     print(variance, kurtosis) #//
     # </data-analysis>
 
@@ -100,6 +103,7 @@ def plot_market_structure(symbols):
     add_empty('')
     add_empty(f"V: {variance:.5f}")
     add_empty(f"K: {round(kurtosis, 1)}")
+    add_empty(f"C: {mean_correlation}")
     # </plotting>
     
     fig.update_layout(template='plotly_dark', autosize=True, margin=dict(l=0, r=0, b=0, t=0), font={"family":"Courier New, monospace"})

@@ -210,6 +210,8 @@ def update():
         process = subprocess.Popen(['python', 'src/streamSPY.py', 'main'])
     first_update = False
     update_counter += 1
+    if update_counter == 14:
+        subprocess.Popen(['python', 'src/tiny_graphics/Inflows.py', 'main'])
     if update_counter == 15:
         update_counter = 0
         subprocess.Popen(['python', 'src/MarketStructure.py', 'main'])
@@ -408,8 +410,13 @@ def main_click(*args):
         additional_button = tk.Button(additional_frame, font="Adobe 12", justify='left', text='', fg='green', bg='black', command=additional_click)
         additional_button.pack(side='left')
         
-        button = tk.Button(additional_frame, text='buttttton') #//
-        button.pack(side='left')
+        img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
+        photoInflows = ImageTk.PhotoImage(img)
+        inflows = tk.Label(additional_frame, image=photoInflows)
+        inflows.overredirect(True)
+        inflows.image = photoInflows
+        inflows.pack(side='left')
+        # todo inflows.bind("<OnHover?>", my function adding stats right below)
         update()
     else:
         additional_line.destroy()
@@ -441,6 +448,7 @@ for key in settings['large_window'].keys():
     if settings['large_window'][key] == True:
         large_window_config[key] = ''
 json.dump(large_window_config, open(os.path.join(tempdir,'large_window.json'), 'w'))
+subprocess.Popen(['python', 'src/tiny_graphics/Inflows.py', 'main'])
 subprocess.Popen(['python', 'src/MarketStructure.py', 'main'])
 
 root.after(0, schedule_update)

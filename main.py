@@ -158,7 +158,7 @@ def update():
 
     def update_additional_line():
         if additional_line is not None:
-            global additional_button
+            global additional_frame, additional_button
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(additional_line_queue)
                 array = future.result()
@@ -167,10 +167,10 @@ def update():
             for element in array:
                 text += f"{element}"
             if additional_line is not None:
-                global additional_button
+                global additional_frame, additional_button
                 additional_button.config(text=text)
 
-                width = additional_button.winfo_reqwidth()
+                width = additional_frame.winfo_reqwidth()
                 height = additional_line.winfo_height()
                 additional_line.geometry(f"{width}x{height}")
 
@@ -393,7 +393,7 @@ def additional_click(*args):
         _large_window_on_close()
 
 def main_click(*args):
-    global additional_line, additional_button, large_window
+    global additional_line, additional_frame, additional_button, large_window
     if additional_line is None:
         additional_line = tk.Toplevel(root)
         additional_line.config(bg='black')
@@ -401,9 +401,15 @@ def main_click(*args):
         additional_line.resizable(0, 0)
         additional_line.overrideredirect(True)
         additional_line.attributes('-topmost', True)
+        
+        additional_frame = tk.Frame(additional_line)
+        additional_frame.pack()
 
-        additional_button = tk.Button(additional_line, font="Adobe 12", justify='left', text='', fg='green', bg='black', command=additional_click)
-        additional_button.pack(anchor='w')
+        additional_button = tk.Button(additional_frame, font="Adobe 12", justify='left', text='', fg='green', bg='black', command=additional_click)
+        additional_button.pack(side='left')
+        
+        button = tk.Button(additional_frame, text='buttttton') #//
+        button.pack(side='left')
         update()
     else:
         additional_line.destroy()

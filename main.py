@@ -402,14 +402,15 @@ def additional_click(*args):
     else:
         _large_window_on_close()
 
-class inflowsLabel():
-    pass
-def inflowsStatsEnter(*args):
-    #* for both we could enter or close twice. Make sure it doesn't break then
-    global inflows_label
-    print('in')
-def inflowsStatsLeave(*args):
-    print('out')
+class InflowsLabel():
+    def __init__(self):
+        self.x0y0x1y1 = '0x0x0x0'
+    def MouseEnter(self, *args):
+        #* for both we could enter or close twice. Make sure it doesn't break then
+        global inflows_label
+        print('in')
+    def MouseLeave(self, *args):
+        print('out')
 def inflows_label_refresh():
     global inflows_label
     img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
@@ -437,10 +438,8 @@ def main_click(*args):
             global inflows_label
             inflows_label = tk.Label(additional_frame, image=None)
             inflows_label_refresh()
-            inflows_label.bind("<Enter>", inflowsStatsEnter)
-            inflows_label.bind("<Leave>", inflowsStatsLeave)
-
-        # todo inflows.bind("<OnHover?>", my function adding stats right below)
+            inflows_label.bind("<Enter>", InflowsLabel.MouseEnter)
+            inflows_label.bind("<Leave>", InflowsLabel.MouseLeave)
         update()
     else:
         additional_line.destroy()

@@ -180,7 +180,8 @@ def update():
                 height = additional_line.winfo_height()
                 additional_line.geometry(f"{width}x{height}")
             if settings['additional_line']['inflows'] == True:
-                inflows_label_refresh()
+                global inflows_label
+                inflows_label.Refresh()
 
     def large_window_queue(script_path):
         try:
@@ -403,20 +404,25 @@ def additional_click(*args):
         _large_window_on_close()
 
 class InflowsLabel():
-    def __init__(self):
-        self.x0y0x1y1 = '0x0x0x0'
+    def __init__(self, master):
+        self.img_path = os.path.join(tempdir,'SpotInflowFig.png')
+        self.label = tk.Label(master)
+        self.label.bind("<Enter>", self.MouseEnter)
+        self.label.bind("<Leave>", self.MouseLeave)
+        self.x0y0x1y1 = '0x0x0x0' #todo
+        
+        self.Refresh()
     def MouseEnter(self, *args):
         #* for both we could enter or close twice. Make sure it doesn't break then
         global inflows_label
         print('in')
     def MouseLeave(self, *args):
         print('out')
-def inflows_label_refresh():
-    global inflows_label
-    img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
-    photoInflows = ImageTk.PhotoImage(img)
-    inflows_label.image = photoInflows
-    inflows_label.pack(side='left')
+    def Refresh(self):
+        img = Image.open(self.img_path)
+        pngInflows = ImageTk.PhotoImage(img)
+        self.label.image = pngInflows
+        self.label.pack(side='left')
 def main_click(*args):
     global additional_line, additional_frame, additional_button, large_window
     if additional_line is None:
@@ -436,10 +442,8 @@ def main_click(*args):
         
         if settings['additional_line']['inflows'] == True:
             global inflows_label
-            inflows_label = tk.Label(additional_frame, image=None)
-            inflows_label_refresh()
-            inflows_label.bind("<Enter>", InflowsLabel.MouseEnter)
-            inflows_label.bind("<Leave>", InflowsLabel.MouseLeave)
+            inflows_label = InflowsLabel(additional_frame)
+            inflows_label.Refresh()
         update()
     else:
         additional_line.destroy()

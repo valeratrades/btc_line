@@ -1,6 +1,6 @@
 import requests, tempfile, json, os
 
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 settings = json.load(open(os.path.join(tempdir,'settings.json'), 'r'))
 
 response = requests.get("https://www.cftc.gov/dea/futures/financial_lf.htm")

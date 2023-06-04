@@ -5,7 +5,8 @@
         "font_size": 12,
         "additional_line": {
             "OI": true,
-            "volume": true
+            "volume": true,
+            "inflows": true
         },
         "large_window": {
             "LSRoutliers": true,

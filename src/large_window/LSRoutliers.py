@@ -6,7 +6,7 @@ most_shorted = 10
 debug = False
 #========================================================== 
 
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 limit = settings['comparison_limit']
 

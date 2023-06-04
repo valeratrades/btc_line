@@ -1,4 +1,7 @@
-import tkinter as tk
+import tkinter as tk, tempfile, os
+from PIL import Image, ImageTk
+
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 
 def create_button(window, text):
     button = tk.Button(window, text=text)
@@ -10,5 +13,12 @@ frame.pack()
 
 create_button(frame, "Button 1")
 create_button(frame, "Button 2")
+
+img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
+photoInflows = ImageTk.PhotoImage(img)
+inflows = tk.Label(frame, image=photoInflows)
+inflows.overrideredirect(True)
+inflows.image = photoInflows
+inflows.pack(side='left')
 
 window.mainloop()

@@ -3,7 +3,7 @@ from alpaca_trade_api.stream import Stream
 
 log = logging.getLogger(__name__)
 
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 
 keys = json.load(open(os.path.join(tempdir, 'keys.json'), 'r'))
 API_KEY = keys['alpaca']['key']
@@ -12,6 +12,8 @@ os.environ['APCA_API_KEY_ID'] = API_KEY
 os.environ['APCA_API_SECRET_KEY'] = API_SECRET
 
 shared_data_path = os.path.join(tempdir, 'spy_feed.json')
+if not os.path.exists(shared_data_path):
+    json.dump((time.time(), None), open(shared_data_path, 'w'))
 
 async def dump_data(t):
     json.dump((time.time(), t['p']), open(shared_data_path, 'w'))

@@ -1,8 +1,8 @@
-import requests, pandas as pd, tempfile, tkinter as tk
+import requests, pandas as pd, tempfile, tkinter as tk, os
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 
 def create_fig(type):
     if type=='spot':
@@ -48,7 +48,8 @@ def create_fig(type):
     fig.subplots_adjust(left=0, bottom=0, right=1, top=1)
     fig.savefig(path)
     return path
-path = create_fig('spot')
+create_fig('spot')
+# path = create_fig('spot')
 
 # root = tk.Tk()
 # root.overrideredirect(True)

@@ -20,7 +20,9 @@ settings_button = None
 SPY_window = None
 MS_window = None
 large_resize_ids = []
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
+if not os.path.exists(tempdir):
+    os.mkdir(tempdir)
 src_dir = os.path.join(script_dir, 'src')
 os.environ['SRC_DIR'] = src_dir
 display = json.load(open(os.path.join(src_dir, 'display.json'), 'r'))
@@ -33,6 +35,10 @@ if not os.path.exists(os.path.join(tempdir, 'settings.json')):
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 if not settings.keys() == default_settings.keys():
     reset_settings()
+for i, s in enumerate(settings):
+    if isinstance(s, dict):
+        if not s.keys() == default_settings[i].keys():
+            reset_settings()
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 #</settings>
 try:
@@ -173,6 +179,8 @@ def update():
                 width = additional_frame.winfo_reqwidth()
                 height = additional_line.winfo_height()
                 additional_line.geometry(f"{width}x{height}")
+            if settings['additional_line']['inflows'] == True:
+                inflows_label_refresh()
 
     def large_window_queue(script_path):
         try:
@@ -394,9 +402,24 @@ def additional_click(*args):
     else:
         _large_window_on_close()
 
+class inflowsLabel():
+    pass
+def inflowsStatsEnter(*args):
+    #* for both we could enter or close twice. Make sure it doesn't break then
+    global inflows_label
+    print('in')
+def inflowsStatsLeave(*args):
+    print('out')
+def inflows_label_refresh():
+    global inflows_label
+    img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
+    photoInflows = ImageTk.PhotoImage(img)
+    inflows_label.image = photoInflows
+    inflows_label.pack(side='left')
 def main_click(*args):
     global additional_line, additional_frame, additional_button, large_window
     if additional_line is None:
+        settings = json.load(open(os.path.join(tempdir, 'settings.json')))
         additional_line = tk.Toplevel(root)
         additional_line.config(bg='black')
         additional_line.geometry(f'{additional_width}x{main_line.winfo_height()}+{main_line.winfo_x()+main_line.winfo_width()}+{main_line.winfo_y()}')
@@ -410,12 +433,13 @@ def main_click(*args):
         additional_button = tk.Button(additional_frame, font="Adobe 12", justify='left', text='', fg='green', bg='black', command=additional_click)
         additional_button.pack(side='left')
         
-        img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
-        photoInflows = ImageTk.PhotoImage(img)
-        inflows = tk.Label(additional_frame, image=photoInflows)
-        inflows.overredirect(True)
-        inflows.image = photoInflows
-        inflows.pack(side='left')
+        if settings['additional_line']['inflows'] == True:
+            global inflows_label
+            inflows_label = tk.Label(additional_frame, image=None)
+            inflows_label_refresh()
+            inflows_label.bind("<Enter>", inflowsStatsEnter)
+            inflows_label.bind("<Leave>", inflowsStatsLeave)
+
         # todo inflows.bind("<OnHover?>", my function adding stats right below)
         update()
     else:

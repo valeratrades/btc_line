@@ -6,8 +6,7 @@ from IPython.display import Image
 hours_selected = 24
 timeframe = 5
 script_dir = os.path.dirname(os.path.abspath(__file__))
-tempdir = tempfile.gettempdir()
-
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 
 def get_historical_data(symbol):
     url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={timeframe}m"
@@ -62,8 +61,6 @@ def plot_market_structure(symbols):
     
     correlation_matrix = normalized_df.corr()
     mean_correlation = correlation_matrix.mean().mean()  #! pretty sure this is a very shitty method
-    
-    print(variance, kurtosis) #//
     # </data-analysis>
 
     fig = go.Figure()
@@ -103,7 +100,7 @@ def plot_market_structure(symbols):
     add_empty('')
     add_empty(f"V: {variance:.5f}")
     add_empty(f"K: {round(kurtosis, 1)}")
-    add_empty(f"C: {mean_correlation}")
+    add_empty(f"C: {round(mean_correlation, 2)}")
     # </plotting>
     
     fig.update_layout(template='plotly_dark', autosize=True, margin=dict(l=0, r=0, b=0, t=0), font={"family":"Courier New, monospace"})

@@ -90,7 +90,7 @@ def plot_market_structure(symbols):
         add_trace(normalized_df[column], name, dict(width=2), True)
     def add_empty(name):
         add_trace([1]*len(normalized_df.index), name, dict(width=0), True)
-        
+
     # <plotting>
     for column in normalized_df.columns:
         if column not in top_performers and column not in bottom_performers and column != 'BTCUSDT':

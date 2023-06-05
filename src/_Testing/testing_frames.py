@@ -17,7 +17,6 @@ create_button(frame, "Button 2")
 img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
 photoInflows = ImageTk.PhotoImage(img)
 inflows = tk.Label(frame, image=photoInflows)
-inflows.overrideredirect(True)
 inflows.image = photoInflows
 inflows.pack(side='left')
 

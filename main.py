@@ -1,6 +1,7 @@
 import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal, inspect
 import tkinter as tk
 from PIL import Image, ImageTk
+from ultra import load
 
 debug = True
 #==========================================================
@@ -175,13 +176,13 @@ def update():
             if additional_line is not None:
                 global additional_frame, additional_button
                 additional_button.config(text=text)
+                if settings['additional_line']['inflows'] == True:
+                    global inflows_label
+                    inflows_label.Refresh()
 
                 width = additional_frame.winfo_reqwidth()
                 height = additional_line.winfo_height()
                 additional_line.geometry(f"{width}x{height}")
-            if settings['additional_line']['inflows'] == True:
-                global inflows_label
-                inflows_label.Refresh()
 
     def large_window_queue(script_path):
         try:
@@ -251,7 +252,25 @@ def large_config():
         width = large_label.winfo_reqwidth()
         height = large_label.winfo_reqheight()
         large_window.geometry(f"{width}x{height}")
-#---------------------------------------------------------- 
+#----------------------------------------------------------
+
+class Window(): #todo // but acctually is it even needed?
+    def resizeImg(self):
+        pass
+
+# <methods> #? how do I drop them into a separate file   
+def StatsPopup(master, text):
+    window = tk.Toplevel(root)
+    window.config(bg='black')
+    window.resizable(0, 0)
+    window.overrideredirect(True)
+    window.attributes('-topmost', True)
+
+    label = tk.Label(window, font="Adobe 12", text=text, fg='blue', bg='white')
+    label.pack(anchor='w')
+    window.geometry(f'{label.winfo_reqwidth()}x{label.winfo_reqheight()}+{master.winfo_x()}+{master.winfo_y()+master.winfo_height()}')
+    return window
+# </methods>
 
 def lower_window(window):
     def lower_and_raise():
@@ -277,8 +296,7 @@ def SPY_show(state):
 
         SPY_label = tk.Button(SPY_window, font="Adobe 12", text='', fg='green', bg='black', command=lambda: lower_window(SPY_window))
         SPY_label.pack(anchor='w')
-    output = f"{round(state, 2)}"
-    output = output+'0' if len(output) <6 else output
+    output = f"{state:.2f}"
     SPY_label.config(text=output)
     SPY_window.lift()
 
@@ -403,26 +421,35 @@ def additional_click(*args):
     else:
         _large_window_on_close()
 
-class InflowsLabel():
+class InflowsLabel(): # make it inherit from TinyGraphics label/window class
     def __init__(self, master):
         self.img_path = os.path.join(tempdir,'SpotInflowFig.png')
-        self.label = tk.Label(master)
-        self.label.bind("<Enter>", self.MouseEnter)
-        self.label.bind("<Leave>", self.MouseLeave)
+        self.stats_path = os.path.join(tempdir, 'SpotInflowStats.json')
+        self.label = tk.Label(master, image=None, borderwidth=0, highlightthickness=0, anchor='nw')
+        self.label.pack(side='left')
         self.x0y0x1y1 = '0x0x0x0' #todo
         
+        self.stats_text = None
+        self.stats_window = None
+        
+        self.label.bind("<Enter>", self.MouseEnter)
+        self.label.bind("<Leave>", self.MouseLeave)
         self.Refresh()
     def MouseEnter(self, *args):
-        #* for both we could enter or close twice. Make sure it doesn't break then
-        global inflows_label
-        print('in')
+        if self.stats_window == None:
+            self.stats_window = StatsPopup(self.label, self.stats_text)
     def MouseLeave(self, *args):
-        print('out')
+        self.stats_window.destroy()
+        self.stats_window = None
     def Refresh(self):
+        print('requested image refresh')
         img = Image.open(self.img_path)
         pngInflows = ImageTk.PhotoImage(img)
+        self.label.config(image=pngInflows)
         self.label.image = pngInflows
-        self.label.pack(side='left')
+        
+        stats = load(self.stats_path)
+        self.stats_text = stats
 def main_click(*args):
     global additional_line, additional_frame, additional_button, large_window
     if additional_line is None:

@@ -1,4 +1,4 @@
-import requests, pandas as pd, tempfile, tkinter as tk, os
+import requests, pandas as pd, tempfile, tkinter as tk, os, json
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
@@ -7,10 +7,12 @@ tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 def create_fig(type):
     if type=='spot':
         url = 'https://api.binance.com/api/v3/klines'
-        path = tempdir+'/SpotInflowFig.png'
+        img_path = tempdir+'/SpotInflowFig.png'
+        stats_path = tempdir+'/SpotInflowStats.json'
     else:
         url = 'https://fapi.binance.com/fapi/v1/klines'
-        path = tempdir+'/FutsInflowFig.png'
+        img_path = tempdir+'/FutsInflowFig.png'
+        stats_path = tempdir+'/FutsInflowStats.json'
         
     params = {
         'symbol': 'BTCUSDT',
@@ -27,7 +29,7 @@ def create_fig(type):
         buys = float(day[-2])
         total = float(day[7])
         net = 2*buys-total
-        norm_net = net/total
+        # norm_net = net/total
         total_volume+=total
 
         netInflows.append(net)
@@ -38,7 +40,7 @@ def create_fig(type):
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     df.set_index('timestamp', inplace=True)
 
-    fig = Figure(figsize=(21, 4), dpi=3.8, facecolor='black')
+    fig = Figure(figsize=(21, 4), dpi=4, facecolor='black')
     ax = fig.add_subplot(111, facecolor='black')
     colors = ['green' if _y >=0 else 'red' for _y in df['net_inflow']]
     ax.bar(df.index, df['net_inflow'], color=colors)
@@ -46,23 +48,13 @@ def create_fig(type):
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     fig.subplots_adjust(left=0, bottom=0, right=1, top=1)
-    fig.savefig(path)
-    return path
-create_fig('spot')
-# path = create_fig('spot')
-
-# root = tk.Tk()
-# root.overrideredirect(True)
-
-# # from PIL import Image, ImageTk
-# # img = Image.open(path)
-# # photo = ImageTk.PhotoImage(img)
-# # label = tk.Label(root, image=photo)
-# # label.image = photo
-# # label.pack()
-
-# # canvas = FigureCanvasTkAgg(fig, master=root)
-# # canvas.draw()
-# # canvas.get_tk_widget().pack()
-
-# root.mainloop()
+    fig.savefig(img_path)
+    
+    stats = f"In: {round(weekInflow, -6)}\npT: {round(100*weekInflow/total_volume, 1)}%"
+    json.dump(stats, open(stats_path, 'w'), indent=4)
+    # return path
+    
+# todo have the class be defined here. Simple, right?
+    
+if __name__=='__main__':
+    create_fig('spot')

@@ -1,7 +1,7 @@
 import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal, inspect
 import tkinter as tk
 from PIL import Image, ImageTk
-from ultra import load
+from Valera import load
 
 debug = True
 #==========================================================

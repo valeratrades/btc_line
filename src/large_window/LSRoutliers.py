@@ -37,11 +37,8 @@ def format_now_then(now, then, dot=(0, 0)):
     format = f"{now}{change}" if settings['comparison_limit'] else f"{now}"
     return format
 
-exchangeInfo = requests.get('https://fapi.binance.com/fapi/v1/exchangeInfo').json()
-futures_pairs = []
-for chunk in exchangeInfo['symbols']:
-    if chunk["symbol"][-1] == "T":
-        futures_pairs.append(chunk["symbol"])
+coins = json.load(open(os.path.join(tempdir, 'binance-perp-coins.json')))
+futures_pairs = [coin.uppper()+'USDT' for coin in coins]
 toRemove = ["BTCSTUSDT", "BTCDOMUSDT", "USDCUSDT"]
 for symbol in toRemove:
     try:

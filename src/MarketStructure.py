@@ -56,8 +56,8 @@ def plot_market_structure(symbols):
     mean_values = normalized_df.mean(axis=1)
     deviations_df = normalized_df.sub(mean_values, axis=0)
     flattened_deviations = deviations_df.values.flatten()
-    variance = np.var(flattened_deviations, ddof=1)
-    kurtosis = pd.Series(flattened_deviations).kurt()
+    variance = np.var(flattened_deviations, ddof=1) #* works, but unconvinient sizing - too many .00s
+    kurtosis = pd.Series(flattened_deviations).kurt() #! meaningless due to **4 thingie, that gets skewed immediately on any outliers
     
     correlation_matrix = normalized_df.corr()
     mean_correlation = correlation_matrix.mean().mean()  #! pretty sure this is a very shitty method
@@ -110,7 +110,7 @@ def plot_market_structure(symbols):
     return fig
 
 def main():
-    symbols = json.load(open(os.path.join(tempdir, 'allListed.json')))
+    symbols = json.load(open(os.path.join(tempdir, 'binance-perp-coins.json')))
 
     fig = plot_market_structure(symbols)
     fig.write_image(os.path.join(tempdir, 'MarketStructure.png'))

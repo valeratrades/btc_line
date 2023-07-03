@@ -47,8 +47,15 @@ try:
 except:
     keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
 json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
-allListed = json.load(open(os.path.join(src_dir, 'allListed.json'), 'r'))
-json.dump(allListed, open(os.path.join(tempdir, 'allListed.json'), 'w'))
+def save_binance_perp_coins_to_tempdir():
+    from Valera import bnpc
+    bnpc(dump=True)
+    binance_perp_coins = json.load(open(os.path.join(src_dir, 'binance-perp-coins.json'), 'r'))
+    if isinstance(binance_perp_coins, list):
+        json.dump(binance_perp_coins, open(os.path.join(tempdir, 'binance-perp-coins.json'), 'w'))
+t = threading.Thread(target=save_binance_perp_coins_to_tempdir)
+t.daemon = True
+t.start()
 
 def sigterm_handler(signum, frame):
     global process

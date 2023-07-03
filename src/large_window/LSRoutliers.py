@@ -39,6 +39,7 @@ def format_now_then(now, then, dot=(0, 0)):
 
 coins = json.load(open(os.path.join(tempdir, 'binance-perp-coins.json')))
 futures_pairs = [coin.uppper()+'USDT' for coin in coins]
+print(futures_pairs)
 toRemove = ["BTCSTUSDT", "BTCDOMUSDT", "USDCUSDT"]
 for symbol in toRemove:
     try:

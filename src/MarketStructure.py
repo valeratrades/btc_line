@@ -94,7 +94,7 @@ def plot_market_structure(symbols):
             add_trace(normalized_df[column], '', dict(width=1, color='grey'), False)
     for column in top_performers:
         add_performers(column)
-    add_trace(normalized_df['BTCUSDT'], f"~BTC~ {round(100*performance['BTCUSDT'], 2):>5}%", dict(width=5, color='gold'), True)
+    add_trace(normalized_df['BTCUSDT'], f"~BTC~ {round(100*performance['BTCUSDT'], 2):>5}", dict(width=5, color='gold'), True)
     for column in bottom_performers[::-1]:
         add_performers(column)
     add_empty('')
@@ -110,7 +110,7 @@ def plot_market_structure(symbols):
     return fig
 
 def main():
-    symbols = json.load(open(os.path.join(tempdir, 'binance-perp-coins.json')))
+    symbols = json.load(open(os.path.join(tempdir, 'binance-perp-pairs.json')))
 
     fig = plot_market_structure(symbols)
     fig.write_image(os.path.join(tempdir, 'MarketStructure.png'))

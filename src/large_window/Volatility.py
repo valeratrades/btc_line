@@ -2,7 +2,7 @@ import asyncio, json, tempfile, os, time, datetime
 from aiohttp import ClientSession
 
 event = asyncio.Event()
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 keys = json.load(open(os.path.join(tempdir, 'keys.json')))
 

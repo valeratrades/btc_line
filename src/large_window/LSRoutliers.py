@@ -37,16 +37,7 @@ def format_now_then(now, then, dot=(0, 0)):
     format = f"{now}{change}" if settings['comparison_limit'] else f"{now}"
     return format
 
-coins = json.load(open(os.path.join(tempdir, 'binance-perp-coins.json')))
-futures_pairs = [coin.uppper()+'USDT' for coin in coins]
-print(futures_pairs)
-toRemove = ["BTCSTUSDT", "BTCDOMUSDT", "USDCUSDT"]
-for symbol in toRemove:
-    try:
-        futures_pairs.remove(symbol)
-    except:
-        pass
-
+futures_pairs = json.load(open(os.path.join(tempdir, 'binance-perp-pairs.json')))
 async def get_ratio(session, symbol):
     try:
         async with session.get(f"https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol={symbol}&period=5m&limit={limit*12 +1}") as resp:

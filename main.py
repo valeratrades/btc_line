@@ -50,9 +50,9 @@ json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
 def save_binance_perp_coins_to_tempdir():
     from Valera import bnpc
     bnpc(dump=True)
-    binance_perp_coins = json.load(open(os.path.join(src_dir, 'binance-perp-coins.json'), 'r'))
+    binance_perp_coins = json.load(open(os.path.join(src_dir, 'binance-perp-pairs.json'), 'r'))
     if isinstance(binance_perp_coins, list):
-        json.dump(binance_perp_coins, open(os.path.join(tempdir, 'binance-perp-coins.json'), 'w'))
+        json.dump(binance_perp_coins, open(os.path.join(tempdir, 'binance-perp-pairs.json'), 'w'))
 t = threading.Thread(target=save_binance_perp_coins_to_tempdir)
 t.daemon = True
 t.start()

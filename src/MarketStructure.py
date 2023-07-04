@@ -6,8 +6,7 @@ from IPython.display import Image
 hours_selected = 24
 timeframe = 5
 script_dir = os.path.dirname(os.path.abspath(__file__))
-tempdir = tempfile.gettempdir()
-
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 
 def get_historical_data(symbol):
     url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={timeframe}m"
@@ -57,13 +56,11 @@ def plot_market_structure(symbols):
     mean_values = normalized_df.mean(axis=1)
     deviations_df = normalized_df.sub(mean_values, axis=0)
     flattened_deviations = deviations_df.values.flatten()
-    variance = np.var(flattened_deviations, ddof=1)
-    kurtosis = pd.Series(flattened_deviations).kurt()
+    variance = np.var(flattened_deviations, ddof=1) #* works, but unconvinient sizing - too many .00s
+    kurtosis = pd.Series(flattened_deviations).kurt() #! meaningless due to **4 thingie, that gets skewed immediately on any outliers
     
     correlation_matrix = normalized_df.corr()
     mean_correlation = correlation_matrix.mean().mean()  #! pretty sure this is a very shitty method
-    
-    print(variance, kurtosis) #//
     # </data-analysis>
 
     fig = go.Figure()
@@ -90,20 +87,20 @@ def plot_market_structure(symbols):
         add_trace(normalized_df[column], name, dict(width=2), True)
     def add_empty(name):
         add_trace([1]*len(normalized_df.index), name, dict(width=0), True)
-        
+
     # <plotting>
     for column in normalized_df.columns:
         if column not in top_performers and column not in bottom_performers and column != 'BTCUSDT':
             add_trace(normalized_df[column], '', dict(width=1, color='grey'), False)
     for column in top_performers:
         add_performers(column)
-    add_trace(normalized_df['BTCUSDT'], f"~BTC~ {round(100*performance['BTCUSDT'], 2):>5}%", dict(width=5, color='gold'), True)
+    add_trace(normalized_df['BTCUSDT'], f"~BTC~ {round(100*performance['BTCUSDT'], 2):>5}", dict(width=5, color='gold'), True)
     for column in bottom_performers[::-1]:
         add_performers(column)
     add_empty('')
     add_empty(f"V: {variance:.5f}")
     add_empty(f"K: {round(kurtosis, 1)}")
-    add_empty(f"C: {mean_correlation}")
+    add_empty(f"C: {round(mean_correlation, 2)}")
     # </plotting>
     
     fig.update_layout(template='plotly_dark', autosize=True, margin=dict(l=0, r=0, b=0, t=0), font={"family":"Courier New, monospace"})
@@ -113,7 +110,7 @@ def plot_market_structure(symbols):
     return fig
 
 def main():
-    symbols = json.load(open(os.path.join(tempdir, 'allListed.json')))
+    symbols = json.load(open(os.path.join(tempdir, 'binance-perp-pairs.json')))
 
     fig = plot_market_structure(symbols)
     fig.write_image(os.path.join(tempdir, 'MarketStructure.png'))

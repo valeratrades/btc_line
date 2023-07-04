@@ -6,7 +6,7 @@ most_shorted = 10
 debug = False
 #========================================================== 
 
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 limit = settings['comparison_limit']
 
@@ -37,18 +37,7 @@ def format_now_then(now, then, dot=(0, 0)):
     format = f"{now}{change}" if settings['comparison_limit'] else f"{now}"
     return format
 
-exchangeInfo = requests.get('https://fapi.binance.com/fapi/v1/exchangeInfo').json()
-futures_pairs = []
-for chunk in exchangeInfo['symbols']:
-    if chunk["symbol"][-1] == "T":
-        futures_pairs.append(chunk["symbol"])
-toRemove = ["BTCSTUSDT", "BTCDOMUSDT", "USDCUSDT"]
-for symbol in toRemove:
-    try:
-        futures_pairs.remove(symbol)
-    except:
-        pass
-
+futures_pairs = json.load(open(os.path.join(tempdir, 'binance-perp-pairs.json')))
 async def get_ratio(session, symbol):
     try:
         async with session.get(f"https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol={symbol}&period=5m&limit={limit*12 +1}") as resp:

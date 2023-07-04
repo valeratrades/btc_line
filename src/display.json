@@ -5,14 +5,15 @@
         "font_size": 12,
         "additional_line": {
             "OI": true,
-            "volume": true
+            "volume": true,
+            "inflows": true
         },
         "large_window": {
             "LSRoutliers": true,
             "CMEpositions": true,
             "Volatility": true
         },
-        "MarketStructure": false
+        "MarketStructure": true
     },
     "large_window": {
         "labels": {

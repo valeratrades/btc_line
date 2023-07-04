@@ -1,6 +1,7 @@
 import websocket, json, threading, time, requests, subprocess, os, sys, tempfile, concurrent.futures, signal, inspect
 import tkinter as tk
 from PIL import Image, ImageTk
+from Valera import load
 
 debug = True
 #==========================================================
@@ -20,7 +21,9 @@ settings_button = None
 SPY_window = None
 MS_window = None
 large_resize_ids = []
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
+if not os.path.exists(tempdir):
+    os.mkdir(tempdir)
 src_dir = os.path.join(script_dir, 'src')
 os.environ['SRC_DIR'] = src_dir
 display = json.load(open(os.path.join(src_dir, 'display.json'), 'r'))
@@ -33,6 +36,10 @@ if not os.path.exists(os.path.join(tempdir, 'settings.json')):
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 if not settings.keys() == default_settings.keys():
     reset_settings()
+for i, s in enumerate(settings):
+    if isinstance(s, dict):
+        if not s.keys() == default_settings[i].keys():
+            reset_settings()
 settings = json.load(open(os.path.join(tempdir, 'settings.json')))
 #</settings>
 try:
@@ -40,8 +47,15 @@ try:
 except:
     keys = json.load(open(os.path.join(script_dir, 'keys.json'), 'r'))
 json.dump(keys, open(os.path.join(tempdir, 'keys.json'), 'w'))
-allListed = json.load(open(os.path.join(src_dir, 'allListed.json'), 'r'))
-json.dump(allListed, open(os.path.join(tempdir, 'allListed.json'), 'w'))
+def save_binance_perp_coins_to_tempdir():
+    from Valera import bnpc
+    bnpc(dump=True)
+    binance_perp_coins = json.load(open(os.path.join(src_dir, 'binance-perp-pairs.json'), 'r'))
+    if isinstance(binance_perp_coins, list):
+        json.dump(binance_perp_coins, open(os.path.join(tempdir, 'binance-perp-pairs.json'), 'w'))
+t = threading.Thread(target=save_binance_perp_coins_to_tempdir)
+t.daemon = True
+t.start()
 
 def sigterm_handler(signum, frame):
     global process
@@ -169,6 +183,9 @@ def update():
             if additional_line is not None:
                 global additional_frame, additional_button
                 additional_button.config(text=text)
+                if settings['additional_line']['inflows'] == True:
+                    global inflows_label
+                    inflows_label.Refresh()
 
                 width = additional_frame.winfo_reqwidth()
                 height = additional_line.winfo_height()
@@ -242,7 +259,25 @@ def large_config():
         width = large_label.winfo_reqwidth()
         height = large_label.winfo_reqheight()
         large_window.geometry(f"{width}x{height}")
-#---------------------------------------------------------- 
+#----------------------------------------------------------
+
+class Window(): #todo // but acctually is it even needed?
+    def resizeImg(self):
+        pass
+
+# <methods> #? how do I drop them into a separate file   
+def StatsPopup(master, text):
+    window = tk.Toplevel(root)
+    window.config(bg='black')
+    window.resizable(0, 0)
+    window.overrideredirect(True)
+    window.attributes('-topmost', True)
+
+    label = tk.Label(window, font="Adobe 12", text=text, fg='blue', bg='white')
+    label.pack(anchor='w')
+    window.geometry(f'{label.winfo_reqwidth()}x{label.winfo_reqheight()}+{master.winfo_x()}+{master.winfo_y()+master.winfo_height()}')
+    return window
+# </methods>
 
 def lower_window(window):
     def lower_and_raise():
@@ -268,8 +303,7 @@ def SPY_show(state):
 
         SPY_label = tk.Button(SPY_window, font="Adobe 12", text='', fg='green', bg='black', command=lambda: lower_window(SPY_window))
         SPY_label.pack(anchor='w')
-    output = f"{round(state, 2)}"
-    output = output+'0' if len(output) <6 else output
+    output = f"{state:.2f}"
     SPY_label.config(text=output)
     SPY_window.lift()
 
@@ -394,9 +428,39 @@ def additional_click(*args):
     else:
         _large_window_on_close()
 
+class InflowsLabel(): # make it inherit from TinyGraphics label/window class
+    def __init__(self, master):
+        self.img_path = os.path.join(tempdir,'SpotInflowFig.png')
+        self.stats_path = os.path.join(tempdir, 'SpotInflowStats.json')
+        self.label = tk.Label(master, image=None, borderwidth=0, highlightthickness=0, anchor='nw')
+        self.label.pack(side='left')
+        self.x0y0x1y1 = '0x0x0x0' #todo
+        
+        self.stats_text = None
+        self.stats_window = None
+        
+        self.label.bind("<Enter>", self.MouseEnter)
+        self.label.bind("<Leave>", self.MouseLeave)
+        self.Refresh()
+    def MouseEnter(self, *args):
+        if self.stats_window == None:
+            self.stats_window = StatsPopup(self.label, self.stats_text)
+    def MouseLeave(self, *args):
+        self.stats_window.destroy()
+        self.stats_window = None
+    def Refresh(self):
+        print('requested image refresh')
+        img = Image.open(self.img_path)
+        pngInflows = ImageTk.PhotoImage(img)
+        self.label.config(image=pngInflows)
+        self.label.image = pngInflows
+        
+        stats = load(self.stats_path)
+        self.stats_text = stats
 def main_click(*args):
     global additional_line, additional_frame, additional_button, large_window
     if additional_line is None:
+        settings = json.load(open(os.path.join(tempdir, 'settings.json')))
         additional_line = tk.Toplevel(root)
         additional_line.config(bg='black')
         additional_line.geometry(f'{additional_width}x{main_line.winfo_height()}+{main_line.winfo_x()+main_line.winfo_width()}+{main_line.winfo_y()}')
@@ -410,13 +474,10 @@ def main_click(*args):
         additional_button = tk.Button(additional_frame, font="Adobe 12", justify='left', text='', fg='green', bg='black', command=additional_click)
         additional_button.pack(side='left')
         
-        img = Image.open(os.path.join(tempdir,'SpotInflowFig.png'))
-        photoInflows = ImageTk.PhotoImage(img)
-        inflows = tk.Label(additional_frame, image=photoInflows)
-        inflows.overredirect(True)
-        inflows.image = photoInflows
-        inflows.pack(side='left')
-        # todo inflows.bind("<OnHover?>", my function adding stats right below)
+        if settings['additional_line']['inflows'] == True:
+            global inflows_label
+            inflows_label = InflowsLabel(additional_frame)
+            inflows_label.Refresh()
         update()
     else:
         additional_line.destroy()

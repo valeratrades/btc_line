@@ -1,7 +1,7 @@
 import json, tempfile, os
 import tkinter as tk
 
-tempdir = tempfile.gettempdir()
+tempdir = os.path.join(tempfile.gettempdir(), 'BTCline')
 script_dir = os.path.dirname(os.path.realpath(__file__))
 settings = json.load(open(os.path.join(tempdir, "settings.json"), 'r'))
 src_dir = os.environ.get('SRC_DIR')

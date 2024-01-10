@@ -1,7 +1,0 @@
-requests
-websocket
-tkinter
-tempfile
-alpaca-trade-api
-pillow
-plotly

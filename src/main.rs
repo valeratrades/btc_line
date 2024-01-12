@@ -38,8 +38,6 @@ async fn main() {
 	ws_to_stdout.await;
 }
 
-// keep inside of Mutex
-//		main_button.config(text=f"{price:.0f}|{buffer_longs}")
 #[derive(Default)]
 struct MainLine {
 	pub btcusdt: Option<f32>,

@@ -1,23 +1,51 @@
-use std::sync::{Arc, Mutex};
-
+use anyhow::{anyhow, Result};
 use futures_util::StreamExt;
+use reqwest;
 use serde_json::Value;
+use std::sync::{Arc, Mutex};
 use tokio_tungstenite::connect_async;
 
 #[tokio::main]
 async fn main() {
 	let main_line = Arc::new(Mutex::new(MainLine::default()));
 
-	let handler = websocket_handler(main_line.clone());
-	let handler_task = tokio::spawn(handler);
 	//TODO!!!: make restart on loss of connection //brownie points for erroring on invalid request
-	match handler_task.await {
-		Ok(_) => println!("WebSocket handler finished."),
-		Err(e) => eprintln!("WebSocket handler encountered an error: {:?}", e),
+	let _binance_websocket_handler = tokio::spawn(binance_websocket_listen(main_line.clone()));
+	let mut cycle = 0;
+	loop {
+		// start collecting all lines simultaneously
+		let main_line_handler = MainLine::collect(main_line.clone());
+		// ...
+
+		// Await everything
+		let _ = main_line_handler.await;
+		// ...
+
+		// Display everything
+		println!("{}", main_line.lock().unwrap().display());
+
+		cycle += 1;
+		if cycle == 15 {
+			cycle = 0;
+		}
+		tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
 	}
 }
 
-async fn websocket_handler(main_line: Arc<Mutex<MainLine>>) {
+#[derive(Default, Debug)]
+struct MainLine {
+	pub btcusdt: Option<f32>,
+	pub percent_longs: Option<f32>,
+}
+impl MainLine {
+	pub fn display(&self) -> String {
+		let btcusdt_display = self.btcusdt.map_or("None".to_string(), |v| format!("{:.0}", v));
+		let percent_longs_display = self.percent_longs.map_or("".to_string(), |v| format!("|{:.2}", v));
+		format!("{}{}", btcusdt_display, percent_longs_display)
+	}
+}
+
+async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
@@ -50,33 +78,56 @@ async fn websocket_handler(main_line: Arc<Mutex<MainLine>>) {
 	.await;
 }
 
-#[derive(Default, Debug)]
-struct MainLine {
-	pub btcusdt: Option<f32>,
-	pub percent_longs: Option<f32>,
-}
 impl MainLine {
-	pub fn display(&self) -> String {
-		let btcusdt_display = self.btcusdt.map_or("None".to_string(), |v| format!("{:.0}", v));
-		let percent_longs_display = self.percent_longs.map_or("".to_string(), |v| format!("|{:.2}", v));
-		format!("{}{}", btcusdt_display, percent_longs_display)
+	pub async fn collect(self_arc: Arc<Mutex<MainLine>>) {
+		let percent_longs_handler = get_percent_longs("BTCUSDT", PercentLongsScope::Global);
+
+		let percent_longs: Option<f32> = match percent_longs_handler.await {
+			Ok(percent_longs) => Some(percent_longs as f32),
+			Err(e) => {
+				eprintln!("Failed to get LSR: {}", e);
+				None
+			}
+		};
+
+		let mut self_lock = self_arc.lock().unwrap();
+		self_lock.percent_longs = percent_longs;
 	}
 }
 
-//```python
-//def get_percent_longs(symbol="btc", type="global"):
-//	symbol = symbol.upper() + "USDT"
-//	type = ("global", "Account") if type == "global" else ("top", "Position")
-//	try:
-//		r = requests.get(f"https://fapi.binance.com/futures/data/{type[0]}LongShort{type[1]}Ratio?symbol={symbol}&period=5m&limit=1").json()
-//		longs = float(r[0]["longAccount"])
-//		longs = str(round(longs, 2))
-//		longs = longs[1:]
-//		if len(longs) == 2:
-//			longs += "0"
-//
-//		return longs
-//	except Exception as e:
-//		print(f"Error getting LSR: {e}")
-//		return None
-//```
+#[allow(dead_code)]
+enum PercentLongsScope {
+	Global,
+	Top,
+}
+impl PercentLongsScope {
+	fn request_url_insertions_tuple(&self) -> (String, String) {
+		match self {
+			PercentLongsScope::Global => ("global".to_string(), "Account".to_string()),
+			PercentLongsScope::Top => ("top".to_string(), "Position".to_string()),
+		}
+	}
+}
+async fn get_percent_longs(symbol_str: &str, type_: PercentLongsScope) -> Result<f64> {
+	let mut symbol = symbol_str.to_uppercase();
+	if !symbol.contains("USDT") {
+		symbol = format!("{}USDT", symbol);
+	}
+
+	let (ins_0, ins_1) = type_.request_url_insertions_tuple();
+
+	let url = format!(
+		"https://fapi.binance.com/futures/data/{}LongShort{}Ratio?symbol={}&period=5m&limit=1",
+		ins_0, ins_1, symbol
+	);
+
+	let resp = reqwest::get(&url).await?;
+	let json: Vec<Value> = resp.json().await?;
+	if let Some(long_account_str) = json.get(0).and_then(|item| item["longAccount"].as_str()) {
+		long_account_str
+			.parse::<f64>()
+			.map_err(|e| anyhow!("Failed to parse 'longAccount' as f64: {}", e))
+	} else {
+		Err(anyhow!("'longAccount' field missing or not a string in response: {:?}", json))
+	}
+}

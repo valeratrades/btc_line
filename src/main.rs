@@ -6,15 +6,27 @@ use tokio_tungstenite::connect_async;
 
 #[tokio::main]
 async fn main() {
+	let main_line = Arc::new(Mutex::new(MainLine::default()));
+
+	let handler = websocket_handler(main_line.clone());
+	let handler_task = tokio::spawn(handler);
+	//TODO!!!: make restart on loss of connection //brownie points for erroring on invalid request
+	match handler_task.await {
+		Ok(_) => println!("WebSocket handler finished."),
+		Err(e) => eprintln!("WebSocket handler encountered an error: {:?}", e),
+	}
+}
+
+async fn websocket_handler(main_line: Arc<Mutex<MainLine>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
 	println!(" ++ Connected ++ ");
 	let (_, read) = ws_stream.split();
 
-	let main_line = Arc::new(Mutex::new(MainLine::default()));
-	let ws_to_stdout = {
-		read.for_each(|message| async {
+	read.for_each(|message| {
+		let main_line = main_line.clone(); // Cloning the Arc for each iteration
+		async move {
 			let data = message.unwrap().into_data();
 			match serde_json::from_slice::<Value>(&data) {
 				Ok(json) => {
@@ -33,28 +45,20 @@ async fn main() {
 					println!("Failed to parse message as JSON: {}", e);
 				}
 			}
-		})
-	};
-	ws_to_stdout.await;
+		}
+	})
+	.await;
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct MainLine {
 	pub btcusdt: Option<f32>,
 	pub percent_longs: Option<f32>,
 }
 impl MainLine {
 	pub fn display(&self) -> String {
-		let btcusdt_display = match self.btcusdt {
-			Some(value) => format!("{:.0}", value),
-			None => "None".to_string(),
-		};
-
-		let percent_longs_display = match self.percent_longs {
-			Some(value) => format!("|{:.2}", value),
-			None => "".to_string(),
-		};
-
+		let btcusdt_display = self.btcusdt.map_or("None".to_string(), |v| format!("{:.0}", v));
+		let percent_longs_display = self.percent_longs.map_or("".to_string(), |v| format!("|{:.2}", v));
 		format!("{}{}", btcusdt_display, percent_longs_display)
 	}
 }

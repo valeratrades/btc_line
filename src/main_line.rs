@@ -17,7 +17,7 @@ impl MainLine {
 		format!("{}{}", btcusdt_display, percent_longs_display)
 	}
 
-	pub async fn websocket(self_arc: Arc<Mutex<MainLine>>) {
+	pub async fn websocket(self_arc: Arc<Mutex<Self>>) {
 		loop {
 			let handle = binance_websocket_listen(self_arc.clone());
 
@@ -47,14 +47,14 @@ impl MainLine {
 	}
 }
 
-pub async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
+async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
 	let (_, read) = ws_stream.split();
 
 	read.for_each(|message| {
-		let main_line = main_line.clone(); // Cloning the Arc for each iteration
+		let main_line = self_arc.clone(); // Cloning the Arc for each iteration
 		async move {
 			let data = message.unwrap().into_data();
 			match serde_json::from_slice::<Value>(&data) {

@@ -9,7 +9,6 @@ use tokio_tungstenite::connect_async;
 async fn main() {
 	let main_line = Arc::new(Mutex::new(MainLine::default()));
 
-	//TODO!!!: make restart on loss of connection //brownie points for erroring on invalid request
 	let _binance_websocket_handler = tokio::spawn(binance_websocket_listen(main_line.clone()));
 	let mut cycle = 0;
 	loop {
@@ -37,6 +36,7 @@ struct MainLine {
 	pub btcusdt: Option<f32>,
 	pub percent_longs: Option<f32>,
 }
+//TODO!: move from arc mutex to atomic floats. Then move out into its own module.
 impl MainLine {
 	pub fn display(&self) -> String {
 		let btcusdt_display = self.btcusdt.map_or("None".to_string(), |v| format!("{:.0}", v));
@@ -45,6 +45,7 @@ impl MainLine {
 	}
 }
 
+//TODO!!!: make restart on loss of connection //brownie points for erroring on invalid request
 async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
@@ -79,6 +80,10 @@ async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
 }
 
 impl MainLine {
+	pub fn websocket(&self) {
+		todo!();
+	}
+
 	pub async fn collect(self_arc: Arc<Mutex<MainLine>>) {
 		let percent_longs_handler = get_percent_longs("BTCUSDT", PercentLongsScope::Global);
 

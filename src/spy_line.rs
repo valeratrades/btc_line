@@ -1,5 +1,6 @@
 use crate::config::Config;
 use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
@@ -8,6 +9,8 @@ use tokio_tungstenite::connect_async;
 #[derive(Default, Debug)]
 pub struct SpyLine {
 	pub spy_price: Option<f32>,
+	//TODO!: have another loop that updates spy_price to None if last timestamp is more than 60s old.
+	last_message_timestamp: DateTime<Utc>,
 }
 
 impl SpyLine {
@@ -55,6 +58,17 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, alpaca_key: &str, a
 
 	let endpoint = "wss://data.alpaca.markets/stream";
 
+	let authenticaton_response = reqwest::Client::new()
+		.get(endpoint)
+		.header("Content-Type", "application/msgpack")
+		.header("APCA-API-KEY-ID", alpaca_key)
+		.header("APCA-API-SECRET-KEY", alpaca_secret)
+		.send()
+		.await
+		.expect("Failed to authenticate with Alpaca");
+
+	dbg!(&authenticaton_response);
+
 	//	// authenticate
 	//	{
 	//    "action": "authenticate",
@@ -72,7 +86,7 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, alpaca_key: &str, a
 	//    }
 	//}
 
-	let url = url::Url::parse(/*address*/).unwrap();
+	let url = url::Url::parse(endpoint).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
 	let (_, read) = ws_stream.split();
 

@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use dirs;
 use serde::{Deserialize, Deserializer};
 use std::convert::AsRef;
 use std::str::FromStr;
-use std::{path::Path, path::PathBuf, process::Command};
+use std::{path::Path, path::PathBuf};
 
 #[derive(Clone, Debug)]
 pub struct ExpandedPath(pub PathBuf);

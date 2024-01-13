@@ -1,5 +1,4 @@
-use crate::config::Config;
-use anyhow::{Context, Result};
+use crate::config::{self, Config};
 use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
 use serde_json::Value;
@@ -14,11 +13,11 @@ pub struct SpyLine {
 }
 
 impl SpyLine {
-	pub fn display(&self) -> String {
+	pub fn display(&self, _config: &Config) -> String {
 		self.spy_price.map_or_else(|| "".to_string(), |v| format!("{:.2}", v))
 	}
 
-	pub async fn websocket(config: Config, self_arc: Arc<Mutex<Self>>) {
+	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: Config) {
 		let alpaca_key = &config.spy.alpaca_key;
 		let alpaca_secret = &config.spy.alpaca_secret;
 		loop {

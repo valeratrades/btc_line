@@ -3,12 +3,12 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::convert::TryFrom;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Config {
 	pub spy: Spy,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Spy {
 	pub alpaca_key: String,
 	pub alpaca_secret: String,

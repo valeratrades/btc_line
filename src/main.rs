@@ -25,8 +25,8 @@ async fn main() {
 		println!("{}", main_line.lock().unwrap().display());
 
 		cycle += 1;
-		if cycle == 15 {
-			cycle = 0;
+		if cycle == 16 {
+			cycle = 1; // rolls to 1, so I can make special cases for 0
 		}
 		tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
 	}

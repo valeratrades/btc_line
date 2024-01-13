@@ -19,12 +19,10 @@ impl MainLine {
 	}
 }
 
-//TODO!!!: make restart on loss of connection //brownie points for erroring on invalid request
 pub async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
-	println!(" ++ Connected ++ ");
 	let (_, read) = ws_stream.split();
 
 	read.for_each(|message| {
@@ -54,8 +52,18 @@ pub async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
 }
 
 impl MainLine {
-	pub fn websocket(&self) {
-		todo!();
+	pub async fn websocket(self_arc: Arc<Mutex<MainLine>>) {
+		loop {
+			let handle = binance_websocket_listen(self_arc.clone());
+
+			handle.await;
+			{
+				let mut lock = self_arc.lock().unwrap();
+				lock.btcusdt = None;
+			}
+			eprintln!("Restarting Binance Websocket in 30 seconds...");
+			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+		}
 	}
 
 	pub async fn collect(self_arc: Arc<Mutex<MainLine>>) {

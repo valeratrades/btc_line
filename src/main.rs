@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 async fn main() {
 	let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
 
-	let _binance_websocket_handler = tokio::spawn(main_line::binance_websocket_listen(main_line.clone()));
+	let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone()));
 	let mut cycle = 0;
 	loop {
 		// start collecting all lines simultaneously

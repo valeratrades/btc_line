@@ -10,7 +10,6 @@ pub struct MainLine {
 	pub btcusdt: Option<f32>,
 	pub percent_longs: Option<f32>,
 }
-//TODO!: move from arc mutex to atomic floats
 impl MainLine {
 	pub fn display(&self) -> String {
 		let btcusdt_display = self.btcusdt.map_or("None".to_string(), |v| format!("{:.0}", v));

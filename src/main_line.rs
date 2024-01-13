@@ -16,6 +16,35 @@ impl MainLine {
 		let percent_longs_display = self.percent_longs.map_or("".to_string(), |v| format!("|{:.2}", v));
 		format!("{}{}", btcusdt_display, percent_longs_display)
 	}
+
+	pub async fn websocket(self_arc: Arc<Mutex<MainLine>>) {
+		loop {
+			let handle = binance_websocket_listen(self_arc.clone());
+
+			handle.await;
+			{
+				let mut lock = self_arc.lock().unwrap();
+				lock.btcusdt = None;
+			}
+			eprintln!("Restarting Binance Websocket in 30 seconds...");
+			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+		}
+	}
+
+	pub async fn collect(self_arc: Arc<Mutex<MainLine>>) {
+		let percent_longs_handler = get_percent_longs("BTCUSDT", PercentLongsScope::Global);
+
+		let percent_longs: Option<f32> = match percent_longs_handler.await {
+			Ok(percent_longs) => Some(percent_longs as f32),
+			Err(e) => {
+				eprintln!("Failed to get LSR: {}", e);
+				None
+			}
+		};
+
+		let mut self_lock = self_arc.lock().unwrap();
+		self_lock.percent_longs = percent_longs;
+	}
 }
 
 pub async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
@@ -48,37 +77,6 @@ pub async fn binance_websocket_listen(main_line: Arc<Mutex<MainLine>>) {
 		}
 	})
 	.await;
-}
-
-impl MainLine {
-	pub async fn websocket(self_arc: Arc<Mutex<MainLine>>) {
-		loop {
-			let handle = binance_websocket_listen(self_arc.clone());
-
-			handle.await;
-			{
-				let mut lock = self_arc.lock().unwrap();
-				lock.btcusdt = None;
-			}
-			eprintln!("Restarting Binance Websocket in 30 seconds...");
-			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-		}
-	}
-
-	pub async fn collect(self_arc: Arc<Mutex<MainLine>>) {
-		let percent_longs_handler = get_percent_longs("BTCUSDT", PercentLongsScope::Global);
-
-		let percent_longs: Option<f32> = match percent_longs_handler.await {
-			Ok(percent_longs) => Some(percent_longs as f32),
-			Err(e) => {
-				eprintln!("Failed to get LSR: {}", e);
-				None
-			}
-		};
-
-		let mut self_lock = self_arc.lock().unwrap();
-		self_lock.percent_longs = percent_longs;
-	}
 }
 
 #[allow(dead_code)]

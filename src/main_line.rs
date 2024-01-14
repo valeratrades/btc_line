@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::output::Output;
 use anyhow::{anyhow, Result};
 use futures_util::StreamExt;
 use reqwest;
@@ -18,9 +19,9 @@ impl MainLine {
 		format!("{}{}", btcusdt_display, percent_longs_display)
 	}
 
-	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: Config) {
+	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: Config, output: Arc<Mutex<Output>>) {
 		loop {
-			let handle = binance_websocket_listen(self_arc.clone(), &config);
+			let handle = binance_websocket_listen(self_arc.clone(), &config, output.clone());
 
 			handle.await;
 			{
@@ -48,7 +49,7 @@ impl MainLine {
 	}
 }
 
-async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &Config) {
+async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &Config, output: Arc<Mutex<Output>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
@@ -56,19 +57,18 @@ async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &Confi
 
 	read.for_each(|message| {
 		let main_line = self_arc.clone(); // Cloning the Arc for each iteration
+		let output = output.clone(); // Can i get rid of these?
 		async move {
 			let data = message.unwrap().into_data();
 			match serde_json::from_slice::<Value>(&data) {
 				Ok(json) => {
 					if let Some(price_str) = json.get("p") {
 						let price: f32 = price_str.as_str().unwrap().parse().unwrap();
-						let main_line_str: String;
-						{
-							let mut main_line = main_line.lock().unwrap();
-							main_line.btcusdt = Some(price);
-							main_line_str = main_line.display(config);
-						}
-						println!("{}", main_line_str);
+						let mut main_line = main_line.lock().unwrap();
+						main_line.btcusdt = Some(price);
+						let mut output_lock = output.lock().unwrap();
+						output_lock.main_line_str = main_line.display(config);
+						output_lock.out().unwrap();
 					}
 				}
 				Err(e) => {

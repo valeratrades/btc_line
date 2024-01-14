@@ -6,6 +6,7 @@ use std::convert::TryFrom;
 #[derive(Deserialize, Clone, Debug)]
 pub struct Config {
 	pub spy: Spy,
+	pub output: String,
 }
 
 #[derive(Deserialize, Clone, Debug)]

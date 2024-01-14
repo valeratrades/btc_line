@@ -1,9 +1,11 @@
 pub mod config;
 mod main_line;
+pub mod output;
 mod spy_line;
 pub mod utils;
 use clap::{Args, Parser, Subcommand};
 use config::Config;
+use output::Output;
 use utils::ExpandedPath;
 
 #[derive(Parser)]
@@ -40,11 +42,13 @@ async fn main() {
 
 	match cli.command {
 		Commands::Start(_) => {
+			let output = Arc::new(Mutex::new(Output::new(config.clone())));
+
 			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
 			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
 
-			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone()));
-			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone()));
+			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone()));
+			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
 			let mut cycle = 0;
 			loop {
 				// start collecting all lines simultaneously
@@ -56,7 +60,11 @@ async fn main() {
 				// ...
 
 				// Display everything
-				println!("{}", main_line.lock().unwrap().display(&config));
+				{
+					let mut output_lock = output.lock().unwrap();
+					output_lock.main_line_str = main_line.lock().unwrap().display(&config);
+					output_lock.out().unwrap();
+				}
 
 				cycle += 1;
 				if cycle == 16 {

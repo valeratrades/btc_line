@@ -36,7 +36,6 @@ impl SpyLine {
 
 async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, alpaca_key: &str, alpaca_secret: &str) {
 	//Failed to connect: Http(Response { status: 403, version: HTTP/1.1, headers: {"date": "Sat, 13 Jan 2024 23:34:58 GMT", "content-type": "text/html", "content-length": "146", "connection": "keep-alive", "strict-transport-security": "max-age=15724800; includeSubDomains", "x-request-id": "4c6899bd9766d860988c3728a23a08e2"}, body: Some([60, 104, 116, 109, 108, 62, 13, 10, 60, 104, 101, 97, 100, 62, 60, 116, 105, 116, 108, 101, 62, 52, 48, 51, 32, 70, 111, 114, 98, 105, 100, 100, 101, 110, 60, 47, 116, 105, 116, 108, 101, 62, 60, 47, 104, 101, 97, 100, 62, 13, 10, 60, 98, 111, 100, 121, 62, 13, 10, 60, 99, 101, 110, 116, 101, 114, 62, 60, 104, 49, 62, 52, 48, 51, 32, 70, 111, 114, 98, 105, 100, 100, 101, 110, 60, 47, 104, 49, 62, 60, 47, 99, 101, 110, 116, 101, 114, 62, 13, 10, 60, 104, 114, 62, 60, 99, 101, 110, 116, 101, 114, 62, 110, 103, 105, 110, 120, 60, 47, 99, 101, 110, 116, 101, 114, 62, 13, 10, 60, 47, 98, 111, 100, 121, 62, 13, 10, 60, 47, 104, 116, 109, 108, 62, 13, 10]) })
-	let endpoint = "wss://data.alpaca.markets/stream";
 
 	let url = url::Url::parse("wss://data.alpaca.markets/stream").unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");

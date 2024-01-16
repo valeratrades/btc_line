@@ -6,6 +6,7 @@ pub mod utils;
 use clap::{Args, Parser, Subcommand};
 use config::Config;
 use output::Output;
+use std::sync::{Arc, Mutex};
 use utils::ExpandedPath;
 
 #[derive(Parser)]
@@ -26,8 +27,6 @@ enum Commands {
 }
 #[derive(Args)]
 struct NoArgs {}
-
-use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() {

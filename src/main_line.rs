@@ -9,8 +9,8 @@ use tokio_tungstenite::connect_async;
 
 #[derive(Default, Debug)]
 pub struct MainLine {
-	pub btcusdt: Option<f32>,
-	pub percent_longs: Option<f32>,
+	pub btcusdt: Option<f64>,
+	pub percent_longs: Option<f64>,
 }
 impl MainLine {
 	pub fn display(&self, _config: &Config) -> String {
@@ -36,8 +36,8 @@ impl MainLine {
 	pub async fn collect(self_arc: Arc<Mutex<MainLine>>) {
 		let percent_longs_handler = get_percent_longs("BTCUSDT", PercentLongsScope::Global);
 
-		let percent_longs: Option<f32> = match percent_longs_handler.await {
-			Ok(percent_longs) => Some(percent_longs as f32),
+		let percent_longs: Option<f64> = match percent_longs_handler.await {
+			Ok(percent_longs) => Some(percent_longs as f64),
 			Err(e) => {
 				eprintln!("Failed to get LSR: {}", e);
 				None
@@ -63,7 +63,7 @@ async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &Confi
 			match serde_json::from_slice::<Value>(&data) {
 				Ok(json) => {
 					if let Some(price_str) = json.get("p") {
-						let price: f32 = price_str.as_str().unwrap().parse().unwrap();
+						let price: f64 = price_str.as_str().unwrap().parse().unwrap();
 						let mut main_line = main_line.lock().unwrap();
 						main_line.btcusdt = Some(price);
 						let mut output_lock = output.lock().unwrap();

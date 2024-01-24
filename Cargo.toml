@@ -18,3 +18,4 @@ tokio = { version = "1.35.1", features = ["full"] }
 tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
 toml = "0.8.8"
 url = "2.5.0"
+v_utils = { version = "0.1.49", features = ["io"] }

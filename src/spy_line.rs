@@ -8,7 +8,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 #[derive(Default, Debug)]
 pub struct SpyLine {
-	pub spy_price: Option<f32>,
+	pub spy_price: Option<f64>,
 	//TODO!: have another loop that updates spy_price to None if last timestamp is more than 60s old.
 	last_message_timestamp: DateTime<Utc>,
 }

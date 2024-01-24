@@ -1,3 +1,4 @@
+mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
@@ -7,7 +8,7 @@ use clap::{Args, Parser, Subcommand};
 use config::Config;
 use output::Output;
 use std::sync::{Arc, Mutex};
-use utils::ExpandedPath;
+use v_utils::io::ExpandedPath;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -45,23 +46,24 @@ async fn main() {
 
 			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
 			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
+			let mut additional_line = additional_line::AdditionalLine::default();
 
 			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone()));
 			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
 			let mut cycle = 0;
 			loop {
-				// start collecting all lines simultaneously
-				let main_line_handler = main_line::MainLine::collect(main_line.clone());
-				// ...
+				{
+					let main_line_handler = main_line::MainLine::collect(main_line.clone());
+					let additional_line_handler = additional_line.collect(&config);
 
-				// Await everything
-				let _ = main_line_handler.await;
-				// ...
+					let _ = main_line_handler.await;
+					let _ = additional_line_handler.await;
+				}
 
-				// Display everything
 				{
 					let mut output_lock = output.lock().unwrap();
 					output_lock.main_line_str = main_line.lock().unwrap().display(&config);
+					output_lock.additional_line_str = additional_line.display(&config);
 					output_lock.out().unwrap();
 				}
 
@@ -73,9 +75,7 @@ async fn main() {
 			}
 		}
 		Commands::Toggle(_) => {
-			//TODO!: impl toggle subcommand
-			eprintln!("TODO!: impl toggle subcommand");
-			std::process::exit(1);
+			unimplemented!();
 		}
 	}
 }

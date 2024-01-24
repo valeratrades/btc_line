@@ -1,10 +1,11 @@
-use crate::utils::ExpandedPath;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::convert::TryFrom;
+use v_utils::io::ExpandedPath;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct Config {
+	pub comparison_offset_h: usize,
 	pub spy: Spy,
 	pub output: String,
 }
@@ -23,6 +24,8 @@ impl TryFrom<ExpandedPath> for Config {
 
 		let config: Config = toml::from_str(&config_str)
 			.with_context(|| "The config file is not correctly formatted TOML\nand/or\n is missing some of the required fields")?;
+
+		anyhow::ensure!(config.comparison_offset_h <= 24, "comparison limits above a day are not supported");
 
 		Ok(config)
 	}

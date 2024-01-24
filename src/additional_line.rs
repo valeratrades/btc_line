@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::utils::NowThen;
+use crate::utils::{LargeNumber, NowThen};
 use anyhow::{anyhow, Result};
 use reqwest;
 use serde::Deserialize;
@@ -54,8 +54,8 @@ async fn get_open_interest_change(client: &reqwest::Client, symbol: &str, compar
 		let json_string = response.text().await?;
 		let r: Vec<OpenInterestHist> = serde_json::from_str(&json_string)?;
 
-		let now: f64 = r[0].sumOpenInterestValue.parse()?;
-		let then: f64 = r[r.len() - 1].sumOpenInterestValue.parse()?;
+		let now: LargeNumber = r[0].sumOpenInterestValue.parse()?;
+		let then: LargeNumber = r[r.len() - 1].sumOpenInterestValue.parse()?;
 
 		Ok(NowThen { now, then })
 	} else {
@@ -75,10 +75,13 @@ async fn get_btc_volume_change(client: &reqwest::Client, comparison_offset_h: us
 		let r: Vec<Kline> = serde_json::from_str(&json_string)?;
 
 		let split = r.split_at(288);
-		let now = split.0.iter().map(|v| v.quote_asset_volume.parse::<f64>().unwrap()).sum();
-		let then = split.1.iter().map(|v| v.quote_asset_volume.parse::<f64>().unwrap()).sum();
+		let now: f64 = split.0.iter().map(|v| v.quote_asset_volume.parse::<f64>().unwrap()).sum();
+		let then: f64 = split.1.iter().map(|v| v.quote_asset_volume.parse::<f64>().unwrap()).sum();
 
-		Ok(NowThen { now, then })
+		Ok(NowThen {
+			now: now.into(),
+			then: then.into(),
+		})
 	} else {
 		Err(anyhow!("Failed to get BTC Volume: {}", response.status()))
 	}

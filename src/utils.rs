@@ -1,85 +1,55 @@
 #[derive(Debug, Clone)]
 pub struct NowThen {
-	pub now: LargeNumber,
-	pub then: LargeNumber,
+	pub now: f64,
+	pub then: f64,
 }
 
-//TODO!!!: bring to parity \
 impl std::fmt::Display for NowThen {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}->{}", self.now, self.then)
-	}
-}
+		let diff = self.now - self.then;
 
-#[derive(Debug, Clone, Default)]
-pub struct LargeNumber(f64);
-impl std::fmt::Display for LargeNumber {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let mut n = self.0;
-		let suffix = match n {
-			_ if n > 1_000_000_000_000_000.0 => {
-				n /= 1_000_000_000_000_000.0;
-				"Q"
-			}
-			_ if n > 1_000_000_000_000.0 => {
-				n /= 1_000_000_000_000.0;
-				"T"
-			}
-			_ if n > 1_000_000_000.0 => {
-				n /= 1_000_000_000.0;
-				"B"
-			}
-			_ if n > 1_000_000.0 => {
-				n /= 1_000_000.0;
-				"M"
-			}
-			_ if n > 1_000.0 => {
-				n /= 1_000.0;
-				"K"
-			}
-			_ => "",
+		let precision_of_base_number = match diff {
+			_ if diff.abs() * 5.0 > self.now.abs() => 2,
+			_ if diff.abs() * 25.0 > self.then.abs() => 1,
+			_ => 0,
 		};
-		write!(f, "{:.2}{}", n, suffix)
+
+		let (now_f, now_suffix) = format_large_number(self.now);
+		let (diff_f, diff_suffix) = format_large_number(diff);
+		let now_suffix = if now_suffix == diff_suffix { "" } else { now_suffix };
+
+		let diff_raw = if diff > 0.0 { format!("+{:.2}", diff_f) } else { format!("{}", diff_f) };
+		let diff_str = format!("{}{}", diff_raw, diff_suffix);
+		let now_raw = format!("{:.*}", precision_of_base_number, now_f);
+		let now_str = format!("{}{}", now_raw, now_suffix);
+
+		write!(f, "{}{}", now_str, diff_str)
 	}
 }
 
-impl std::str::FromStr for LargeNumber {
-	type Err = anyhow::Error;
-
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let mut n = s.parse::<f64>()?;
-
-		//TODO!: parse LargeNumber from strings with suffixes too
-		//let suffix = match s.chars().last() {
-		//	Some('Q') => {
-		//		n *= 1_000_000_000_000_000.0;
-		//		"Q"
-		//	}
-		//	Some('T') => {
-		//		n *= 1_000_000_000_000.0;
-		//		"T"
-		//	}
-		//	Some('B') => {
-		//		n *= 1_000_000_000.0;
-		//		"B"
-		//	}
-		//	Some('M') => {
-		//		n *= 1_000_000.0;
-		//		"M"
-		//	}
-		//	Some('K') => {
-		//		n *= 1_000.0;
-		//		"K"
-		//	}
-		//	_ => "",
-		//};
-		//anyhow::ensure!(suffix != "", "Failed to parse LargeNumber");
-		Ok(LargeNumber(n))
-	}
-}
-
-impl From<f64> for LargeNumber {
-	fn from(v: f64) -> Self {
-		LargeNumber(v)
-	}
+fn format_large_number(mut n: f64) -> (f64, &'static str) {
+	let suffix = match n {
+		_ if n > 1_000_000_000_000_000.0 => {
+			n /= 1_000_000_000_000_000.0;
+			"Q"
+		}
+		_ if n > 1_000_000_000_000.0 => {
+			n /= 1_000_000_000_000.0;
+			"T"
+		}
+		_ if n > 1_000_000_000.0 => {
+			n /= 1_000_000_000.0;
+			"B"
+		}
+		_ if n > 1_000_000.0 => {
+			n /= 1_000_000.0;
+			"M"
+		}
+		_ if n > 1_000.0 => {
+			n /= 1_000.0;
+			"K"
+		}
+		_ => "",
+	};
+	(n, suffix)
 }

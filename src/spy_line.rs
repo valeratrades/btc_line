@@ -1,4 +1,4 @@
-use crate::config::{self, Config};
+use crate::config::Config;
 use crate::output::Output;
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};

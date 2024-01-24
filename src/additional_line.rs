@@ -15,7 +15,7 @@ impl AdditionalLine {
 	pub fn display(&self, _config: &Config) -> String {
 		let oi = self.open_interest_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
 		let v = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
-		format!("{}{}", oi, v)
+		format!("OI{}V{}", oi, v)
 	}
 
 	pub async fn collect(&mut self, config: &Config) {

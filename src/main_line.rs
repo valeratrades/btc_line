@@ -2,10 +2,10 @@ use crate::config::Config;
 use crate::output::Output;
 use anyhow::{anyhow, Result};
 use futures_util::StreamExt;
-use reqwest;
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
 use tokio_tungstenite::connect_async;
+use tracing::debug;
 
 #[derive(Default, Debug)]
 pub struct MainLine {
@@ -33,7 +33,7 @@ impl MainLine {
 				let mut lock = self_arc.lock().unwrap();
 				lock.btcusdt = None;
 			}
-			eprintln!("Restarting Binance Websocket in 30 seconds...");
+			debug!("Restarting Binance Websocket in 30 seconds...");
 			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
 		}
 	}
@@ -44,7 +44,7 @@ impl MainLine {
 		let percent_longs: Option<f64> = match percent_longs_handler.await {
 			Ok(percent_longs) => Some(percent_longs as f64),
 			Err(e) => {
-				eprintln!("Failed to get LSR: {}", e);
+				debug!("Failed to get LSR: {}", e);
 				None
 			}
 		};
@@ -77,7 +77,7 @@ async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &Confi
 					}
 				}
 				Err(e) => {
-					println!("Failed to parse message as JSON: {}", e);
+					debug!("Failed to parse message as JSON: {}", e);
 				}
 			}
 		}

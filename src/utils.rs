@@ -1,3 +1,26 @@
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+
+pub fn init_tracing() {
+	let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info"));
+	let formatting_layer = BunyanFormattingLayer::new("discretionary_engine".into(), std::io::stdout);
+	let subscriber = Registry::default().with(env_filter).with(JsonStorageLayer).with(formatting_layer);
+
+	set_global_default(subscriber).expect("Failed to set subscriber");
+
+	let default_panic_hook = std::panic::take_hook();
+	std::panic::set_hook(Box::new(move |panic_info| {
+		if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+			tracing::error!("panic occurred: {:?}", s);
+		} else {
+			tracing::error!("panic occurred");
+		}
+
+		default_panic_hook(panic_info);
+	}));
+}
+
 #[derive(Debug, Clone)]
 pub struct NowThen {
 	pub now: f64,
@@ -22,7 +45,7 @@ impl std::fmt::Display for NowThen {
 }
 
 fn format_number_compactly(mut n: f64, precision: f64) -> (f64, &'static str) {
-	assert!(precision >= 0.0, "The hell you're doing over there?");
+	assert!(precision >= 0.0, "Precision can't be negative, the hell? {:?}", precision);
 	let mut thousands = 0;
 	while n.abs() >= 1000.0 {
 		n /= 1000.0;

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tracing::{debug, error, info};
 
 #[derive(Default, Debug)]
 pub struct SpyLine {
@@ -30,7 +31,7 @@ impl SpyLine {
 				let mut lock = self_arc.lock().unwrap();
 				lock.spy_price = None;
 			}
-			eprintln!("Restarting Spy Websocket in 30 seconds...");
+			debug!("Restarting Spy Websocket in 30 seconds...");
 			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
 		}
 	}
@@ -52,7 +53,7 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 
 	if let Some(message) = read.next().await {
 		let message = message.unwrap();
-		eprintln!("Connected Message: {:?}", message);
+		info!("Connected Message: {:?}", message);
 		assert_eq!(message, Message::Text("[{\"T\":\"success\",\"msg\":\"connected\"}]".to_string()));
 
 		write.send(Message::Text(auth_message)).await.unwrap();
@@ -66,7 +67,7 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 
 	if let Some(message) = read.next().await {
 		let message = message.unwrap();
-		eprintln!("Authenticated Message: {:?}", message);
+		info!("Authenticated Message: {:?}", message);
 		assert_eq!(message, Message::Text("[{\"T\":\"success\",\"msg\":\"authenticated\"}]".to_string()));
 
 		write.send(Message::Text(listen_message)).await.unwrap();
@@ -74,7 +75,7 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 
 	if let Some(message) = read.next().await {
 		let message = message.unwrap();
-		eprintln!("Subscription Message: {:?}", message);
+		info!("Subscription Message: {:?}", message);
 		assert_eq!(message, Message::Text("[{\"T\":\"subscription\",\"trades\":[\"SPY\"],\"quotes\":[],\"bars\":[],\"updatedBars\":[],\"dailyBars\":[],\"statuses\":[],\"lulds\":[],\"corrections\":[\"SPY\"],\"cancelErrors\":[\"SPY\"]}]".to_string()));
 	}
 
@@ -121,11 +122,11 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 					}
 				}
 				Err(e) => {
-					eprintln!("Text but not a quote: {:?}", e);
+					debug!("Text but not a quote: {:?}", e);
 				}
 			},
 			_ => {
-				eprintln!("Message from alpaca, that is not text or ping: {:?}", message);
+				debug!("Message from alpaca, that is not text or ping: {:?}", message);
 			}
 		}
 	}

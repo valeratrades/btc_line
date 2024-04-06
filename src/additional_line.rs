@@ -1,11 +1,11 @@
 use crate::config::Config;
 use crate::utils::NowThen;
 use anyhow::{anyhow, Result};
-use reqwest;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::{Arc, Mutex};
+use tracing::debug;
 
 //TODO!: implement tiny graphics
 #[derive(Default, Debug)]
@@ -41,14 +41,14 @@ impl AdditionalLine {
 		self_arc.lock().unwrap().open_interest_change = match open_interest_change_handler.await {
 			Ok(open_interest_change) => Some(open_interest_change),
 			Err(e) => {
-				eprintln!("Failed to get Open Interest: {}", e);
+				debug!("Failed to get Open Interest: {}", e);
 				None
 			}
 		};
 		self_arc.lock().unwrap().btc_volume_change = match btc_volume_change_handler.await {
 			Ok(btc_volume_change) => Some(btc_volume_change),
 			Err(e) => {
-				eprintln!("Failed to get BTC Volume: {}", e);
+				debug!("Failed to get BTC Volume: {}", e);
 				None
 			}
 		};

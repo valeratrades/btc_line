@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::AppConfig;
 use crate::output::Output;
 use anyhow::{anyhow, Result};
 use futures_util::StreamExt;
@@ -13,7 +13,7 @@ pub struct MainLine {
 	pub percent_longs: Option<f64>,
 }
 impl MainLine {
-	pub fn display(&self, config: &Config) -> String {
+	pub fn display(&self, config: &AppConfig) -> String {
 		let price_line = self.btcusdt.map_or("None".to_string(), |v| format!("{:.0}", v));
 		let mut longs_line = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", v));
 
@@ -24,7 +24,7 @@ impl MainLine {
 		format!("{}|{}", price_line, longs_line)
 	}
 
-	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: Config, output: Arc<Mutex<Output>>) {
+	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<Output>>) {
 		loop {
 			let handle = binance_websocket_listen(self_arc.clone(), &config, output.clone());
 
@@ -54,7 +54,7 @@ impl MainLine {
 	}
 }
 
-async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &Config, output: Arc<Mutex<Output>>) {
+async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &AppConfig, output: Arc<Mutex<Output>>) {
 	let address = "wss://fstream.binance.com/ws/btcusdt@markPrice";
 	let url = url::Url::parse(address).unwrap();
 	let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");

@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::AppConfig;
 use crate::utils::NowThen;
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
@@ -16,7 +16,7 @@ pub struct AdditionalLine {
 }
 
 impl AdditionalLine {
-	pub fn display(&self, config: &Config) -> String {
+	pub fn display(&self, config: &AppConfig) -> String {
 		if !self.enabled {
 			return "".to_string();
 		}
@@ -31,7 +31,7 @@ impl AdditionalLine {
 		format!("{} {}", oi_str, v_str)
 	}
 
-	pub async fn collect(self_arc: Arc<Mutex<Self>>, config: &Config) {
+	pub async fn collect(self_arc: Arc<Mutex<Self>>, config: &AppConfig) {
 		let comparison_offset_h = config.comparison_offset_h;
 
 		let client = reqwest::Client::new();
@@ -54,7 +54,7 @@ impl AdditionalLine {
 		};
 	}
 
-	pub async fn listen_to_pipe(self_arc: Arc<Mutex<Self>>, config: Config, output: Arc<Mutex<crate::output::Output>>) {
+	pub async fn listen_to_pipe(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<crate::output::Output>>) {
 		let pipe_path = "/tmp/btc_line_additional_line";
 
 		loop {

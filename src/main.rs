@@ -5,7 +5,7 @@ pub mod output;
 mod spy_line;
 pub mod utils;
 use clap::{Args, Parser, Subcommand};
-use config::Config;
+use config::AppConfig;
 use output::Output;
 use std::sync::{Arc, Mutex};
 use tracing::error;
@@ -36,7 +36,7 @@ struct NoArgs {}
 async fn main() {
 	utils::init_tracing();
 	let cli = Cli::parse();
-	let config = match Config::try_from(cli.config) {
+	let config = match AppConfig::new(cli.config) {
 		Ok(cfg) => cfg,
 		Err(e) => {
 			error!("{:?}", e);

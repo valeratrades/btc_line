@@ -1,9 +1,9 @@
-use crate::config::Config;
+use crate::config::AppConfig;
 use anyhow::Result;
 
 #[derive(Debug)]
 pub struct Output {
-	config: Config,
+	config: AppConfig,
 	pub main_line_str: String,
 	pub spy_line_str: String,
 	pub additional_line_str: String,
@@ -32,7 +32,7 @@ impl Output {
 		Ok(())
 	}
 
-	pub fn new(config: Config) -> Self {
+	pub fn new(config: AppConfig) -> Self {
 		Self {
 			config,
 			main_line_str: "".to_string(),

@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::AppConfig;
 use crate::output::Output;
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
@@ -20,7 +20,7 @@ impl SpyLine {
 		self.spy_price.map_or_else(|| "".to_string(), |v| format!("{:.2}", v))
 	}
 
-	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: Config, output: Arc<Mutex<Output>>) {
+	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<Output>>) {
 		let alpaca_key = &config.spy.alpaca_key;
 		let alpaca_secret = &config.spy.alpaca_secret;
 		loop {

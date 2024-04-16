@@ -1,6 +1,6 @@
 use config::{ConfigError, File};
 use serde::Deserialize;
-use v_utils::{io::ExpandedPath, macros::PrivateValues};
+use v_utils::{io::ExpandedPath, macros::MyConfigPrimitives};
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct AppConfig {
@@ -11,7 +11,7 @@ pub struct AppConfig {
 	pub output: String,
 }
 
-#[derive(Clone, Debug, PrivateValues)]
+#[derive(Clone, Debug, MyConfigPrimitives)]
 pub struct Spy {
 	pub alpaca_key: String,
 	pub alpaca_secret: String,

@@ -1,0 +1,87 @@
+mod additional_line;
+pub mod config;
+mod main_line;
+pub mod output;
+mod spy_line;
+pub mod utils;
+use std::sync::{Arc, Mutex};
+
+use clap::{Args, Parser, Subcommand};
+use config::AppConfig;
+use output::Output;
+use tracing::error;
+use v_utils::io::ExpandedPath;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+	#[command(subcommand)]
+	command: Commands,
+	#[arg(long, default_value = "~/.config/btc_line.toml")]
+	config: ExpandedPath,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+	/// Start the program
+	/// Note: to toggle the additional_line, pipe "false" to /tmp/btc_line_additional_line, and "true" to enable it again.
+	/// ```bash
+	/// echo "false" > /tmp/btc_line_additional_line
+	/// ```
+	Start(NoArgs),
+}
+#[derive(Args)]
+struct NoArgs {}
+
+#[tokio::main]
+async fn main() {
+	utils::init_tracing();
+	let cli = Cli::parse();
+	let config = match AppConfig::new(cli.config) {
+		Ok(cfg) => cfg,
+		Err(e) => {
+			error!("{:?}", e);
+			std::process::exit(1);
+		}
+	};
+
+	match cli.command {
+		Commands::Start(_) => {
+			let output = Arc::new(Mutex::new(Output::new(config.clone())));
+
+			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
+			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
+			let additional_line = Arc::new(Mutex::new(additional_line::AdditionalLine::default()));
+			if config.additional_line.show_by_default {
+				additional_line.lock().unwrap().enabled = true;
+			}
+
+			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone()));
+			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
+			let _ = tokio::spawn(additional_line::AdditionalLine::listen_to_pipe(additional_line.clone(), config.clone(), output.clone()));
+			let mut cycle = 0;
+			loop {
+				{
+					let main_line_handler = main_line::MainLine::collect(main_line.clone());
+					let additional_line_handler = additional_line::AdditionalLine::collect(additional_line.clone(), &config);
+
+					let _ = main_line_handler.await;
+					let _ = additional_line_handler.await;
+				}
+
+				{
+					let mut output_lock = output.lock().unwrap();
+					output_lock.main_line_str = main_line.lock().unwrap().display(&config);
+					output_lock.additional_line_str = additional_line.lock().unwrap().display(&config);
+					output_lock.out().unwrap();
+				}
+
+				cycle += 1;
+				if cycle == 16 {
+					cycle = 1; // rolls to 1, so I can make special cases for 0
+				}
+				tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+			}
+		}
+	}
+}

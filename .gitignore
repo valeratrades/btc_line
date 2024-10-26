@@ -1,4 +1,5 @@
 ## Conventional
+**/flake.lock
 **/tmp/
 **/target/
 **/debug/

@@ -1,7 +1,7 @@
 use std::{io::Write, path::Path};
 
 use tracing_error::ErrorLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Registry};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 /// # Panics
 pub fn init_subscriber(log_path: Option<Box<Path>>) {
@@ -16,14 +16,7 @@ pub fn init_subscriber(log_path: Option<Box<Path>>) {
 
 		let error_layer = ErrorLayer::default();
 
-		let console_layer = console_subscriber::spawn::<Registry>(); // does nothing unless `RUST_LOG=tokio=trace,runtime=trace`. But how do I make it not write to file for them?
-
-		tracing_subscriber::registry()
-			.with(console_layer)
-			.with(env_filter)
-			.with(formatting_layer)
-			.with(error_layer)
-			.init();
+		tracing_subscriber::registry().with(env_filter).with(formatting_layer).with(error_layer).init();
 		//tracing_subscriber::registry()
 		//  .with(tracing_subscriber::layer::Layer::and_then(formatting_layer, error_layer).with_filter(env_filter))
 		//  .with(console_layer)

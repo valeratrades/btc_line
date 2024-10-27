@@ -5,6 +5,8 @@ use futures_util::StreamExt;
 use serde_json::Value;
 use tokio_tungstenite::connect_async;
 use tracing::debug;
+use tokio_rustls::TlsConnector;
+
 
 use crate::{config::AppConfig, output::Output};
 

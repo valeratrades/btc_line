@@ -1,24 +1,58 @@
-use tracing::subscriber::set_global_default;
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use std::{io::Write, path::Path};
 
-pub fn init_tracing() {
-	let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info"));
-	let formatting_layer = BunyanFormattingLayer::new("discretionary_engine".into(), std::io::stdout);
-	let subscriber = Registry::default().with(env_filter).with(JsonStorageLayer).with(formatting_layer);
+use tracing_error::ErrorLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Registry};
 
-	set_global_default(subscriber).expect("Failed to set subscriber");
+/// # Panics
+pub fn init_subscriber(log_path: Option<Box<Path>>) {
+	let setup = |make_writer: Box<dyn Fn() -> Box<dyn Write> + Send + Sync>| {
+		//let tokio_console_artifacts_filter = EnvFilter::new("tokio[trace]=off,runtime[trace]=off");
+		let formatting_layer = tracing_subscriber::fmt::layer().json().pretty().with_writer(make_writer).with_file(true).with_line_number(true)/*.with_filter(tokio_console_artifacts_filter)*/;
 
-	let default_panic_hook = std::panic::take_hook();
-	std::panic::set_hook(Box::new(move |panic_info| {
-		if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-			tracing::error!("panic occurred: {:?}", s);
-		} else {
-			tracing::error!("panic occurred");
+		let env_filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or(tracing_subscriber::EnvFilter::new("info"));
+		//let env_filter = env_filter
+		//      .add_directive("tokio=off".parse().unwrap())
+		//      .add_directive("runtime=off".parse().unwrap());
+
+		let error_layer = ErrorLayer::default();
+
+		let console_layer = console_subscriber::spawn::<Registry>(); // does nothing unless `RUST_LOG=tokio=trace,runtime=trace`. But how do I make it not write to file for them?
+
+		tracing_subscriber::registry()
+			.with(console_layer)
+			.with(env_filter)
+			.with(formatting_layer)
+			.with(error_layer)
+			.init();
+		//tracing_subscriber::registry()
+		//  .with(tracing_subscriber::layer::Layer::and_then(formatting_layer, error_layer).with_filter(env_filter))
+		//  .with(console_layer)
+		//  .init();
+	};
+
+	match log_path {
+		Some(path) => {
+			let path = path.to_owned();
+
+			// Truncate the file before setting up the logger
+			{
+				let _ = std::fs::OpenOptions::new()
+					.create(true)
+					.write(true)
+					.truncate(true)
+					.open(&path)
+					.expect("Failed to truncate log file");
+			}
+
+			setup(Box::new(move || {
+				let file = std::fs::OpenOptions::new().create(true).append(true).open(&path).expect("Failed to open log file");
+				Box::new(file) as Box<dyn Write>
+			}));
 		}
-
-		default_panic_hook(panic_info);
-	}));
+		None => {
+			setup(Box::new(|| Box::new(std::io::stdout())));
+		}
+	};
 }
 
 #[derive(Debug, Clone)]

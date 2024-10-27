@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use color_eyre::eyre::{eyre, bail, Result};
+use color_eyre::eyre::{bail, eyre, Result};
 use futures_util::StreamExt;
 use serde_json::Value;
 use tokio_tungstenite::connect_async;

@@ -35,7 +35,7 @@ struct NoArgs {}
 
 #[tokio::main]
 async fn main() {
-	utils::init_tracing();
+	utils::init_subscriber(None);
 	let cli = Cli::parse();
 	let config = match AppConfig::new(cli.config) {
 		Ok(cfg) => cfg,

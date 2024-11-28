@@ -1,0 +1,34 @@
+{
+    "default_settings": {
+        "comparison_limit": 1,
+        "label_data": true,
+        "font_size": 12,
+        "additional_line": {
+            "OI": true,
+            "volume": true,
+            "inflows": true
+        },
+        "large_window": {
+            "LSRoutliers": true,
+            "CMEpositions": true,
+            "Volatility": true
+        },
+        "MarketStructure": true
+    },
+    "large_window": {
+        "labels": {
+            "LSRoutliers": {
+                "text": "Most Longed:       Most Shorted:",
+                "pos": 0
+            },
+            "CMEpositions": {
+                "text": "[(Long, Short), Inst and lev-Funds]",
+                "pos": 1
+            },
+            "Volatility": {
+                "text": "__Vol; (VIX, BVOL ...more soon):",
+                "pos": 0
+            }
+        }
+    }
+}

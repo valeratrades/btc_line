@@ -1,0 +1,9 @@
+TODO
+TODO.txt
+my_keys.json
+tempdir.lnk
+.direnv/
+__pycache__/
+tmp/
+.env/
+.direnv/

@@ -1,0 +1,8 @@
+requests
+websocket
+tk
+temp
+alpaca-trade-api
+pillow
+plotly
+ValeraLib

@@ -8,7 +8,8 @@ use color_eyre::eyre::{bail, Result};
 use serde::Deserialize;
 use tracing::debug;
 
-use crate::{config::AppConfig, utils::NowThen};
+use crate::config::AppConfig;
+use v_utils::NowThen;
 
 //TODO!: implement tiny graphics
 #[derive(Default, Debug)]
@@ -64,8 +65,8 @@ impl AdditionalLine {
 			// Attempt to open the named pipe; this will block until the other side is opened for writing
 			if let Ok(file) = File::open(pipe_path) {
 				let reader = BufReader::new(file);
-				for line in reader.lines() {
-					if let Some(line) = line.ok() {
+				reader.lines().for_each(|line| {
+					if let Ok(line) = line {
 						if let Ok(arg) = line.parse::<bool>() {
 							if self_arc.lock().unwrap().enabled != arg {
 								self_arc.lock().unwrap().enabled = arg;
@@ -75,7 +76,7 @@ impl AdditionalLine {
 							}
 						}
 					}
-				}
+				});
 			}
 			tokio::time::sleep(tokio::time::Duration::from_millis(125)).await;
 		}

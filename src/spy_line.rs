@@ -54,9 +54,9 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 	if let Some(message) = read.next().await {
 		let message = message.unwrap();
 		info!("Connected Message: {:?}", message);
-		assert_eq!(message, Message::Text("[{\"T\":\"success\",\"msg\":\"connected\"}]".to_string()));
+		assert_eq!(message, Message::Text("[{\"T\":\"success\",\"msg\":\"connected\"}]".to_string().into()));
 
-		write.send(Message::Text(auth_message)).await.unwrap();
+		write.send(Message::Text(auth_message.into())).await.unwrap();
 	}
 
 	let listen_message = json!({
@@ -68,15 +68,15 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 	if let Some(message) = read.next().await {
 		let message = message.unwrap();
 		info!("Authenticated Message: {:?}", message);
-		assert_eq!(message, Message::Text("[{\"T\":\"success\",\"msg\":\"authenticated\"}]".to_string()));
+		assert_eq!(message, Message::Text("[{\"T\":\"success\",\"msg\":\"authenticated\"}]".to_string().into()));
 
-		write.send(Message::Text(listen_message)).await.unwrap();
+		write.send(Message::Text(listen_message.into())).await.unwrap();
 	}
 
 	if let Some(message) = read.next().await {
 		let message = message.unwrap();
 		info!("Subscription Message: {:?}", message);
-		assert_eq!(message, Message::Text("[{\"T\":\"subscription\",\"trades\":[\"SPY\"],\"quotes\":[],\"bars\":[],\"updatedBars\":[],\"dailyBars\":[],\"statuses\":[],\"lulds\":[],\"corrections\":[\"SPY\"],\"cancelErrors\":[\"SPY\"]}]".to_string()));
+		assert_eq!(message, Message::Text("[{\"T\":\"subscription\",\"trades\":[\"SPY\"],\"quotes\":[],\"bars\":[],\"updatedBars\":[],\"dailyBars\":[],\"statuses\":[],\"lulds\":[],\"corrections\":[\"SPY\"],\"cancelErrors\":[\"SPY\"]}]".to_string().into()));
 	}
 
 	let refresh_arc = self_arc.clone();
@@ -84,13 +84,13 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 	tokio::spawn(async move {
 		loop {
 			if refresh_arc.lock().unwrap().last_message_timestamp < Utc::now() - chrono::Duration::seconds(10 * 60) && refresh_arc.lock().unwrap().spy_price.is_some() {
-   						refresh_arc.lock().unwrap().spy_price = None;
-   						{
-   							let mut output_lock = refresh_output.lock().unwrap();
-   							output_lock.spy_line_str = "".to_string();
-   							output_lock.out().unwrap();
-   						}
-   					}
+				refresh_arc.lock().unwrap().spy_price = None;
+				{
+					let mut output_lock = refresh_output.lock().unwrap();
+					output_lock.spy_line_str = "".to_string();
+					output_lock.out().unwrap();
+				}
+			}
 			tokio::time::sleep(tokio::time::Duration::from_secs(5 * 60)).await;
 		}
 	});

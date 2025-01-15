@@ -49,9 +49,6 @@ async def get_ratio(session, symbol):
 			r = await resp.json()
 			now = r[0]["longShortRatio"]
 			then = r[-1]["longShortRatio"]
-			"""if r_now[2] == '.': # if number is >= 10, it would overwise be output as '11.'
-                r_now[2] == ' '
-            now = r_now[:3]"""  # supposedly can handle it with format_now_then(now, then, 1)
 			if not now[:3].lower() == "inf":
 				ratios.append({"symbol": symbol[:-4], "values": (now, then)})
 	except:

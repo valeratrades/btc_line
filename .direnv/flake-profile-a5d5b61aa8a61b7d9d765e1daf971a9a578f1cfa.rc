@@ -55,7 +55,7 @@ NIX_CC_WRAPPER_TARGET_BUILD_x86_64_unknown_linux_gnu='1'
 export NIX_CC_WRAPPER_TARGET_BUILD_x86_64_unknown_linux_gnu
 NIX_CC_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu='1'
 export NIX_CC_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu
-NIX_CFLAGS_COMPILE=' -frandom-seed=3s1lw64ld9 -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include'
+NIX_CFLAGS_COMPILE=' -frandom-seed=fnz3snigm9 -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include'
 export NIX_CFLAGS_COMPILE
 NIX_CFLAGS_COMPILE_FOR_BUILD=' -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include -isystem /nix/store/zgbn7c77c40zv9vaakvhynkjq8qnrn1y-openssl-3.3.2-dev/include -isystem /nix/store/901c80rlps5q05bnjk1sj4zaz5k736nc-python3-3.12.7/include'
 export NIX_CFLAGS_COMPILE_FOR_BUILD
@@ -313,13 +313,14 @@ fi
 							cp -f /nix/store/1b0d2xkn0qc3bpz7rqxalpb7hd5f29yz-unknown ./.treefmt.toml
 							cp -f /nix/store/k7qb2hv1774wxc3i1fqkp83ddpd1hqb9-pre-commit-hook.sh ./.git/hooks/custom.sh
 
+							mkdir -p ./.cargo
 							cp -f /nix/store/5q1vvnfsr4ifmhb1qgi5p1fp4kwsx91h-unknown ./rustfmt.toml
 							cp -f /nix/store/5jy0vr3dksjxpjmshnx3ykxkkh0pfs47-deny.toml ./deny.toml
 							cp -f /nix/store/x8m1j5hpqnlr6nw7blz4kgwkq1c5jwrj-config.toml ./.cargo/config.toml
 							cp -f /nix/store/wcaf5x5pmmip67izvnns09kf10rdmhg8-toolchain.toml ./.cargo/rust-toolchain.toml
 							cp -f /nix/store/7z0v894ryhxs73dk1q8sm5wmlai7frjx-combined-gitignore ./.gitignore
 
-							cp -f /nix/store/qcps203pvzdxs9am17dinjfv20w5wmw1-README.md ./README.md
+							cp -f /nix/store/mfc23crm0rjmgklafj4igkgfsai32fdj-README.md ./README.md
 						'
 export shellHook
 stdenv='/nix/store/dh9szsq14j2w2dx7pn219n27gwq7w3dn-stdenv-linux'

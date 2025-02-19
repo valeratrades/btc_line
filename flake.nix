@@ -15,7 +15,7 @@
           inherit system overlays;
         };
 
-				pre-commit-check = pre-commit-hooks.lib.${system}.run (v-utils.files.preCommit { inherit pkgs; });
+        pre-commit-check = pre-commit-hooks.lib.${system}.run (v-utils.files.preCommit { inherit pkgs; });
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
         pname = manifest.name;
         stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.stdenv;
@@ -50,27 +50,28 @@
 
         devShells.default = with pkgs; mkShell {
           inherit stdenv;
-					shellHook =
-						pre-commit-check.shellHook +
-						''
-							mkdir -p ./.github/workflows
-							rm -f ./.github/workflows/errors.yml; cp ${workflowContents.errors} ./.github/workflows/errors.yml
-							rm -f ./.github/workflows/warnings.yml; cp ${workflowContents.warnings} ./.github/workflows/warnings.yml
+          shellHook =
+            pre-commit-check.shellHook +
+            ''
+              							mkdir -p ./.github/workflows
+              							rm -f ./.github/workflows/errors.yml; cp ${workflowContents.errors} ./.github/workflows/errors.yml
+              							rm -f ./.github/workflows/warnings.yml; cp ${workflowContents.warnings} ./.github/workflows/warnings.yml
 
-							cp -f ${v-utils.files.licenses.blue_oak} ./LICENSE
+              							cp -f ${v-utils.files.licenses.blue_oak} ./LICENSE
 
-							cargo -Zscript -q ${v-utils.hooks.appendCustom} ./.git/hooks/pre-commit
-							cp -f ${(v-utils.hooks.treefmt) {inherit pkgs;}} ./.treefmt.toml
-							cp -f ${(v-utils.hooks.preCommit) { inherit pkgs pname; }} ./.git/hooks/custom.sh
+              							cargo -Zscript -q ${v-utils.hooks.appendCustom} ./.git/hooks/pre-commit
+              							cp -f ${(v-utils.hooks.treefmt) {inherit pkgs;}} ./.treefmt.toml
+              							cp -f ${(v-utils.hooks.preCommit) { inherit pkgs pname; }} ./.git/hooks/custom.sh
 
-							cp -f ${(v-utils.files.rust.rustfmt {inherit pkgs;})} ./rustfmt.toml
-							cp -f ${(v-utils.files.rust.deny {inherit pkgs;})} ./deny.toml
-							cp -f ${(v-utils.files.rust.config {inherit pkgs;})} ./.cargo/config.toml
-							cp -f ${(v-utils.files.rust.toolchain {inherit pkgs;})} ./.cargo/rust-toolchain.toml
-							cp -f ${(v-utils.files.gitignore { inherit pkgs; langs = ["rs"];})} ./.gitignore
+              							mkdir -p ./.cargo
+              							cp -f ${(v-utils.files.rust.rustfmt {inherit pkgs;})} ./rustfmt.toml
+              							cp -f ${(v-utils.files.rust.deny {inherit pkgs;})} ./deny.toml
+              							cp -f ${(v-utils.files.rust.config {inherit pkgs;})} ./.cargo/config.toml
+              							cp -f ${(v-utils.files.rust.toolchain {inherit pkgs; toolchain = "nightly";})} ./.cargo/rust-toolchain.toml
+              							cp -f ${(v-utils.files.gitignore { inherit pkgs; langs = ["rs"];})} ./.gitignore
 
-							cp -f ${readme} ./README.md
-						'';
+              							cp -f ${readme} ./README.md
+              						'';
 
           packages = [
             mold-wrapped

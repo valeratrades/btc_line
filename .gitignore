@@ -5,6 +5,7 @@
 **/bin/
 **/*.test
 **/*.out
+**/**.db
 
 ## Personal
 **/_*
@@ -18,12 +19,12 @@ commit_message
 commit
 functions.sh
 
+## Nix
+result/
+.direnv/
+
 ## Vim
 *.sw[po]
-
-## Nix
-**/flake.lock
-result
 
 ## MacOS
 .DS_Store
@@ -52,9 +53,7 @@ venv/
 *.exe
 *.exe~
 *.dll
-
-
 ## Rust
-.cargo/config.toml
-.cargo/config
 **/**.pending-snap
+### could be used for initial debugging of apps using `config` crate
+config.toml

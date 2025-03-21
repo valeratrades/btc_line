@@ -56,6 +56,7 @@ async fn main() {
 				additional_line.lock().unwrap().enabled = true;
 			}
 
+			//TODO!!!: change to [].join() along with main loop.
 			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone()));
 			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
 			let _ = tokio::spawn(additional_line::AdditionalLine::listen_to_pipe(additional_line.clone(), config.clone(), output.clone()));
@@ -77,7 +78,7 @@ async fn main() {
 				}
 
 				cycle += 1;
-				if cycle == 16 {
+				if cycle == 15 {
 					cycle = 1; // rolls to 1, so I can make special cases for 0
 				}
 				tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;

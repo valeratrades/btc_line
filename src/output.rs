@@ -13,7 +13,7 @@ pub struct Output {
 //? potentially, could store last modified for every value, subsequently that all of them are recent enough when called from the main loop.
 impl Output {
 	pub fn out(&self) -> Result<()> {
-		if self.config.output == "eww".to_owned() {
+		if self.config.output == *"eww" {
 			std::process::Command::new("sh")
 				.arg("-c")
 				.arg(format!("eww update btc_line_main_str=\"{}\"", self.main_line_str))

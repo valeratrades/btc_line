@@ -7,9 +7,9 @@ use std::{
 use color_eyre::eyre::{bail, Result};
 use serde::Deserialize;
 use tracing::debug;
+use v_utils::NowThen;
 
 use crate::config::AppConfig;
-use v_utils::NowThen;
 
 //TODO!: implement tiny graphics
 #[derive(Default, Debug)]
@@ -99,7 +99,7 @@ async fn get_open_interest_change(client: &reqwest::Client, symbol: &str, compar
 		let now: f64 = r[0].sumOpenInterestValue.parse()?;
 		let then: f64 = r[r.len() - 1].sumOpenInterestValue.parse()?;
 
-		Ok(NowThen { now, then })
+		Ok(NowThen::new(now, then))
 	} else {
 		bail!("Failed to get Open Interest Change: {}", response.status())
 	}
@@ -119,7 +119,7 @@ async fn get_btc_volume_change(client: &reqwest::Client, comparison_offset_h: us
 		let now: f64 = split.0.iter().map(|v| v.quote_asset_volume.parse::<f64>().unwrap()).sum();
 		let then: f64 = split.1.iter().map(|v| v.quote_asset_volume.parse::<f64>().unwrap()).sum();
 
-		Ok(NowThen { now, then })
+		Ok(NowThen::new(now, then))
 	} else {
 		bail!("Failed to get BTC Volume: {}", response.status())
 	}

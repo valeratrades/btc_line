@@ -10,6 +10,7 @@ use clap::{Args, Parser, Subcommand};
 use config::AppConfig;
 use output::Output;
 use tracing::error;
+use v_exchanges::binance::Binance;
 use v_utils::io::ExpandedPath;
 
 #[derive(Parser)]
@@ -52,18 +53,19 @@ async fn main() {
 			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
 			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
 			let additional_line = Arc::new(Mutex::new(additional_line::AdditionalLine::default()));
+			let exchange = Arc::new(Binance::default());
 			if config.additional_line.show_by_default {
 				additional_line.lock().unwrap().enabled = true;
 			}
 
-			//TODO!!!: change to [].join() along with main loop.
-			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone()));
+			//TODO!!!: change to [].join() along with main loop. Spawns bad.
+			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone(), Arc::clone(&exchange)));
 			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
 			let _ = tokio::spawn(additional_line::AdditionalLine::listen_to_pipe(additional_line.clone(), config.clone(), output.clone()));
 			let mut cycle = 0;
 			loop {
 				{
-					let main_line_handler = main_line::MainLine::collect(main_line.clone());
+					let main_line_handler = main_line::MainLine::collect(Arc::clone(&main_line), Arc::clone(&exchange));
 					let additional_line_handler = additional_line::AdditionalLine::collect(additional_line.clone(), &config);
 
 					let _ = main_line_handler.await;

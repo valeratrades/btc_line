@@ -5,7 +5,7 @@
 **/bin/
 **/*.test
 **/*.out
-**/**.db
+**/*.db
 
 ## Personal
 **/_*
@@ -20,7 +20,7 @@ commit
 functions.sh
 
 ## Nix
-result/
+result
 .direnv/
 
 ## Vim
@@ -53,7 +53,11 @@ venv/
 *.exe
 *.exe~
 *.dll
+
+## Web
+**/*.sass-cache/
 ## Rust
 **/**.pending-snap
 ### could be used for initial debugging of apps using `config` crate
 config.toml
+**/rustc-ice*

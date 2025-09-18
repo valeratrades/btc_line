@@ -25,9 +25,9 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
 	/// Start the program
-	/// Note: to toggle the additional_line, pipe "false" to /tmp/btc_line_additional_line, and "true" to enable it again.
+	/// Note: to toggle the additional_line, pipe "false" to /tmp/btc_line/toggle_additional, and "true" to enable it again.
 	/// ```bash
-	/// echo "false" > /tmp/btc_line_additional_line
+	/// echo "false" > /tmp/btc_line/toggle_additional
 	/// ```
 	Start(NoArgs),
 }

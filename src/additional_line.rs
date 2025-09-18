@@ -1,6 +1,7 @@
 use std::{
-	fs::File,
+	fs::{self, File},
 	io::{BufRead, BufReader},
+	path::Path,
 	sync::{Arc, Mutex},
 };
 
@@ -59,7 +60,20 @@ impl AdditionalLine {
 	}
 
 	pub async fn listen_to_pipe(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<crate::output::Output>>) {
-		let pipe_path = "/tmp/btc_line_additional_line";
+		let pipe_path = "/tmp/btc_line/toggle_additional";
+		
+		// Create /tmp/btc_line directory if it doesn't exist
+		let pipe_dir = "/tmp/btc_line";
+		if !Path::new(pipe_dir).exists() {
+			let _ = fs::create_dir_all(pipe_dir);
+		}
+
+		// Create named pipe if it doesn't exist
+		if !Path::new(pipe_path).exists() {
+			let _ = std::process::Command::new("mkfifo")
+				.arg(pipe_path)
+				.status();
+		}
 
 		loop {
 			// Attempt to open the named pipe; this will block until the other side is opened for writing

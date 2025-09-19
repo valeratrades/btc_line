@@ -2,6 +2,7 @@ use color_eyre::eyre::Result;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::os::unix::fs::OpenOptionsExt;
 
 use crate::config::AppConfig;
 
@@ -81,13 +82,17 @@ impl Output {
 				.status()?;
 		}
 
-		// Write to pipe (non-blocking)
-		if let Ok(mut file) = std::fs::OpenOptions::new()
-			.write(true)
-			.open(pipe_path) 
+		// Write to pipe with non-blocking I/O and explicit scope for immediate file closure
 		{
-			let _ = writeln!(file, "{}", content);
-		}
+			if let Ok(mut file) = std::fs::OpenOptions::new()
+				.write(true)
+				.custom_flags(libc::O_NONBLOCK)
+				.open(pipe_path)
+			{
+				let _ = writeln!(file, "{}", content);
+				// file is automatically dropped here when scope ends
+			}
+		} // Explicit scope ensures file handle is closed immediately
 
 		Ok(())
 	}

@@ -5,26 +5,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "^0.4.40"
-clap = { version = "^4.5.37", features = ["derive"] }
-color-eyre = "^0.6.3"
-config = "^0.15.11"
+chrono = "^0.4.42"
+clap = { version = "^4.5.47", features = ["derive"] }
+color-eyre = "^0.6.5"
+config = "^0.15.16"
 console-subscriber = "^0.4.1"
 futures-util = "^0.3.31"
-reqwest = { version = "^0.12.15", features = ["json"] } #, "rustls-tls"], default-features = false }
-serde = { version = "^1.0.219", features = ["derive"] }
-serde_json = "^1.0.140"
-tokio = { version = "^1.44.2", features = ["full"] }
-tokio-rustls = "^0.26.2"
+reqwest = { version = "^0.12.23", features = ["json"] } #, "rustls-tls"], default-features = false }
+serde = { version = "^1.0.225", features = ["derive"] }
+serde_json = "^1.0.145"
+tokio = { version = "^1.47.1", features = ["full"] }
+tokio-rustls = "^0.26.3"
 #tokio-tungstenite = { version = "^0.24.0", default-features = true, features = ["rustls"] }
-tokio-tungstenite = { version = "^0.26.2", features = ["native-tls"] }
+tokio-tungstenite = { version = "^0.27.0", features = ["native-tls"] }
 tracing = "^0.1.41"
 tracing-error = "^0.2.1"
 tracing-log = "^0.2.0"
-tracing-subscriber = { version = "^0.3.19", features = ["fmt", "json", "registry", "env-filter"] }
-url = "^2.5.4"
-v_exchanges = "^0.10.2"
-v_utils = { version = "^2.6.4", features = ["io", "macros"] }
+tracing-subscriber = { version = "^0.3.20", features = ["fmt", "json", "registry", "env-filter"] }
+url = "^2.5.7"
+v_exchanges = { version = "^0.11.1", path = "../v_exchanges/v_exchanges" } #ga: rm path
+v_utils = { version = "^2.6.8", features = ["io", "macros"] }
 #native-tls = { version = "0.2.12", features = ["vendored"] } # manage this piece of garbage explicitly
 
 #tracing-futures = "0.2.5"

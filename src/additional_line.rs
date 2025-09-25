@@ -30,7 +30,7 @@ impl AdditionalLine {
 		let mut v_str = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
 
 		if config.label {
-			oi_str = format!("OI:{}", oi_str);
+			oi_str = format!("OI:{oi_str}");
 			v_str = format!("V:{}", v_str);
 		}
 		format!("{} {}", oi_str, v_str)
@@ -61,7 +61,7 @@ impl AdditionalLine {
 
 	pub async fn listen_to_pipe(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<crate::output::Output>>) {
 		let pipe_path = "/tmp/btc_line/toggle_additional";
-		
+
 		// Create /tmp/btc_line directory if it doesn't exist
 		let pipe_dir = "/tmp/btc_line";
 		if !Path::new(pipe_dir).exists() {
@@ -70,9 +70,7 @@ impl AdditionalLine {
 
 		// Create named pipe if it doesn't exist
 		if !Path::new(pipe_path).exists() {
-			let _ = std::process::Command::new("mkfifo")
-				.arg(pipe_path)
-				.status();
+			let _ = std::process::Command::new("mkfifo").arg(pipe_path).status();
 		}
 
 		loop {

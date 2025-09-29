@@ -1,11 +1,6 @@
-use std::{
-	fs::{self, File},
-	io::{BufRead, BufReader},
-	path::Path,
-	sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use serde::Deserialize;
 use tracing::debug;
 use v_utils::NowThen;
@@ -17,15 +12,10 @@ use crate::config::AppConfig;
 pub struct AdditionalLine {
 	open_interest_change: Option<NowThen>,
 	btc_volume_change: Option<NowThen>,
-	pub enabled: bool,
 }
 
 impl AdditionalLine {
 	pub fn display(&self, config: &AppConfig) -> String {
-		if !self.enabled {
-			return "".to_string();
-		}
-
 		let mut oi_str = self.open_interest_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
 		let mut v_str = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
 
@@ -57,41 +47,6 @@ impl AdditionalLine {
 				None
 			}
 		};
-	}
-
-	pub async fn listen_to_pipe(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<crate::output::Output>>) {
-		let pipe_path = "/tmp/btc_line/toggle_additional";
-
-		// Create /tmp/btc_line directory if it doesn't exist
-		let pipe_dir = "/tmp/btc_line";
-		if !Path::new(pipe_dir).exists() {
-			let _ = fs::create_dir_all(pipe_dir);
-		}
-
-		// Create named pipe if it doesn't exist
-		if !Path::new(pipe_path).exists() {
-			let _ = std::process::Command::new("mkfifo").arg(pipe_path).status();
-		}
-
-		loop {
-			// Attempt to open the named pipe; this will block until the other side is opened for writing
-			if let Ok(file) = File::open(pipe_path) {
-				let reader = BufReader::new(file);
-				reader.lines().for_each(|line| {
-					if let Ok(line) = line {
-						if let Ok(arg) = line.parse::<bool>() {
-							if self_arc.lock().unwrap().enabled != arg {
-								self_arc.lock().unwrap().enabled = arg;
-								let mut output_lock = output.lock().unwrap();
-								output_lock.additional_line_str = self_arc.lock().unwrap().display(&config);
-								output_lock.out().unwrap();
-							}
-						}
-					}
-				});
-			}
-			tokio::time::sleep(tokio::time::Duration::from_millis(125)).await;
-		}
 	}
 }
 

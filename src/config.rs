@@ -5,7 +5,6 @@ use v_utils::{io::ExpandedPath, macros::MyConfigPrimitives};
 #[derive(Deserialize, Clone, Debug)]
 pub struct AppConfig {
 	pub spy: Spy,
-	pub additional_line: AdditionalLine,
 	pub comparison_offset_h: usize,
 	pub label: bool,
 	pub output: String,
@@ -17,10 +16,6 @@ pub struct Spy {
 	pub alpaca_secret: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
-pub struct AdditionalLine {
-	pub show_by_default: bool,
-}
 
 impl AppConfig {
 	pub fn new(path: ExpandedPath) -> Result<Self, ConfigError> {

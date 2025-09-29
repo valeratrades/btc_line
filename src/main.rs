@@ -25,10 +25,6 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
 	/// Start the program
-	/// Note: to toggle the additional_line, pipe "false" to /tmp/btc_line/toggle_additional, and "true" to enable it again.
-	/// ```bash
-	/// echo "false" > /tmp/btc_line/toggle_additional
-	/// ```
 	Start(NoArgs),
 }
 #[derive(Args)]
@@ -54,14 +50,10 @@ async fn main() {
 			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
 			let additional_line = Arc::new(Mutex::new(additional_line::AdditionalLine::default()));
 			let exchange = Arc::new(Binance::default());
-			if config.additional_line.show_by_default {
-				additional_line.lock().unwrap().enabled = true;
-			}
 
 			//TODO!!!: change to [].join() along with main loop. Spawns bad.
 			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone(), Arc::clone(&exchange)));
 			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
-			let _ = tokio::spawn(additional_line::AdditionalLine::listen_to_pipe(additional_line.clone(), config.clone(), output.clone()));
 			let mut cycle = 0;
 			loop {
 				{

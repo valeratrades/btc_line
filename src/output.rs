@@ -1,8 +1,6 @@
+use std::{fs, io::Write, os::unix::fs::OpenOptionsExt, path::Path};
+
 use color_eyre::eyre::Result;
-use std::fs;
-use std::io::Write;
-use std::path::Path;
-use std::os::unix::fs::OpenOptionsExt;
 
 use crate::config::AppConfig;
 
@@ -33,17 +31,17 @@ impl Output {
 			Some(std::thread::spawn(move || {
 				std::process::Command::new("sh")
 					.arg("-c")
-					.arg(format!("eww update btc_line_main_str=\"{}\"", main_line))
+					.arg(format!("eww update btc_line_main_str=\"{main_line}\""))
 					.status()
 					.expect("eww daemon is not running");
 				std::process::Command::new("sh")
 					.arg("-c")
-					.arg(format!("eww update btc_line_spy_str=\"{}\"", spy_line))
+					.arg(format!("eww update btc_line_spy_str=\"{spy_line}\""))
 					.status()
 					.expect("eww daemon is not running");
 				std::process::Command::new("sh")
 					.arg("-c")
-					.arg(format!("eww update btc_line_additional_str=\"{}\"", additional_line))
+					.arg(format!("eww update btc_line_additional_str=\"{additional_line}\""))
 					.status()
 					.expect("eww daemon is not running");
 			}))
@@ -56,11 +54,11 @@ impl Output {
 			let main_line = self.main_line_str.clone();
 			let spy_line = self.spy_line_str.clone();
 			let additional_line = self.additional_line_str.clone();
-			
+
 			std::thread::spawn(move || -> Result<()> {
-				Self::write_to_pipe(&format!("{}/main", pipe_dir), &main_line)?;
-				Self::write_to_pipe(&format!("{}/spy", pipe_dir), &spy_line)?;
-				Self::write_to_pipe(&format!("{}/additional", pipe_dir), &additional_line)?;
+				Self::write_to_pipe(&format!("{pipe_dir}/main"), &main_line)?;
+				Self::write_to_pipe(&format!("{pipe_dir}/spy"), &spy_line)?;
+				Self::write_to_pipe(&format!("{pipe_dir}/additional"), &additional_line)?;
 				Ok(())
 			})
 		};
@@ -77,18 +75,12 @@ impl Output {
 	fn write_to_pipe(pipe_path: &str, content: &str) -> Result<()> {
 		// Create named pipe if it doesn't exist
 		if !Path::new(pipe_path).exists() {
-			std::process::Command::new("mkfifo")
-				.arg(pipe_path)
-				.status()?;
+			std::process::Command::new("mkfifo").arg(pipe_path).status()?;
 		}
 
 		// Write to pipe with non-blocking I/O and explicit scope for immediate file closure
 		{
-			if let Ok(mut file) = std::fs::OpenOptions::new()
-				.write(true)
-				.custom_flags(libc::O_NONBLOCK)
-				.open(pipe_path)
-			{
+			if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
 				let _ = writeln!(file, "{}", content);
 				// file is automatically dropped here when scope ends
 			}

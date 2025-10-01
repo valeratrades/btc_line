@@ -16,7 +16,6 @@ pub struct Spy {
 	pub alpaca_secret: String,
 }
 
-
 impl AppConfig {
 	pub fn new(path: ExpandedPath) -> Result<Self, ConfigError> {
 		let builder = config::Config::builder().set_default("comparison_offset_h", 24)?.add_source(File::with_name(&path.to_string()));

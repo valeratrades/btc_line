@@ -1,6 +1,7 @@
 use std::{fs, io::Write, os::unix::fs::OpenOptionsExt, path::Path};
 
 use color_eyre::eyre::Result;
+use tracing::instrument;
 
 use crate::config::AppConfig;
 
@@ -72,6 +73,7 @@ impl Output {
 		Ok(())
 	}
 
+	#[instrument]
 	fn write_to_pipe(pipe_path: &str, content: &str) -> Result<()> {
 		// Create named pipe if it doesn't exist
 		if !Path::new(pipe_path).exists() {
@@ -81,7 +83,7 @@ impl Output {
 		// Write to pipe with non-blocking I/O and explicit scope for immediate file closure
 		{
 			if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
-				let _ = writeln!(file, "{}", content);
+				let _ = writeln!(file, "{content}");
 				// file is automatically dropped here when scope ends
 			}
 		} // Explicit scope ensures file handle is closed immediately

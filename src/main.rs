@@ -65,9 +65,11 @@ async fn main() {
 				}
 
 				{
+					let main_line_str = { main_line.lock().unwrap().display(&config) };
+					let additional_line_str = { additional_line.lock().unwrap().display(&config) };
 					let mut output_lock = output.lock().unwrap();
-					output_lock.main_line_str = main_line.lock().unwrap().display(&config);
-					output_lock.additional_line_str = additional_line.lock().unwrap().display(&config);
+					output_lock.main_line_str = main_line_str;
+					output_lock.additional_line_str = additional_line_str;
 					output_lock.out().unwrap();
 				}
 

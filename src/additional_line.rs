@@ -1,14 +1,14 @@
 use std::sync::{Arc, Mutex};
 
 use color_eyre::eyre::{Result, bail};
-use serde::Deserialize;
-use tracing::debug;
+use serde::{Deserialize, Serialize};
+use tracing::{debug, info};
 use v_utils::NowThen;
 
 use crate::config::AppConfig;
 
 //TODO!: implement tiny graphics
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize)]
 pub struct AdditionalLine {
 	open_interest_change: Option<NowThen>,
 	btc_volume_change: Option<NowThen>,
@@ -23,7 +23,7 @@ impl AdditionalLine {
 			oi_str = format!("OI:{oi_str}");
 			v_str = format!("V:{}", v_str);
 		}
-		format!("{} {}", oi_str, v_str)
+		format!("{oi_str} {v_str}")
 	}
 
 	pub async fn collect(self_arc: Arc<Mutex<Self>>, config: &AppConfig) {
@@ -32,21 +32,26 @@ impl AdditionalLine {
 		let client = reqwest::Client::new();
 		let open_interest_change_handler = get_open_interest_change(&client, "BTCUSDT", comparison_offset_h);
 		let btc_volume_change_handler = get_btc_volume_change(&client, comparison_offset_h);
+		//TODO: switch to join
 
-		self_arc.lock().unwrap().open_interest_change = match open_interest_change_handler.await {
-			Ok(open_interest_change) => Some(open_interest_change),
+		let mut new_state = AdditionalLine::default(); // slight perf hit in favor of debuggability
+		//TODO: rewrite a tad more succinctly  {{{
+		match open_interest_change_handler.await {
+			Ok(open_interest_change) => new_state.open_interest_change = Some(open_interest_change),
 			Err(e) => {
 				debug!("Failed to get Open Interest: {}", e);
-				None
 			}
 		};
-		self_arc.lock().unwrap().btc_volume_change = match btc_volume_change_handler.await {
-			Ok(btc_volume_change) => Some(btc_volume_change),
+		match btc_volume_change_handler.await {
+			Ok(btc_volume_change) => new_state.btc_volume_change = Some(btc_volume_change),
 			Err(e) => {
 				debug!("Failed to get BTC Volume: {}", e);
-				None
 			}
 		};
+		//,}}}
+
+		info!(?new_state);
+		*self_arc.lock().unwrap() = new_state;
 	}
 }
 

@@ -16,12 +16,12 @@ pub struct AdditionalLine {
 
 impl AdditionalLine {
 	pub fn display(&self, config: &AppConfig) -> String {
-		let mut oi_str = self.open_interest_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
-		let mut v_str = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| format!("{}", v));
+		let mut oi_str = self.open_interest_change.as_ref().map_or("None".to_string(), |v| v.to_string());
+		let mut v_str = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| v.to_string());
 
 		if config.label {
 			oi_str = format!("OI:{oi_str}");
-			v_str = format!("V:{}", v_str);
+			v_str = format!("V:{v_str}");
 		}
 		format!("{oi_str} {v_str}")
 	}
@@ -32,23 +32,22 @@ impl AdditionalLine {
 		let client = reqwest::Client::new();
 		let open_interest_change_handler = get_open_interest_change(&client, "BTCUSDT", comparison_offset_h);
 		let btc_volume_change_handler = get_btc_volume_change(&client, comparison_offset_h);
-		//TODO: switch to join
 
 		let mut new_state = AdditionalLine::default(); // slight perf hit in favor of debuggability
-		//TODO: rewrite a tad more succinctly  {{{
-		match open_interest_change_handler.await {
+		let (oi_result, volume_result) = tokio::join!(open_interest_change_handler, btc_volume_change_handler);
+
+		match oi_result {
 			Ok(open_interest_change) => new_state.open_interest_change = Some(open_interest_change),
 			Err(e) => {
-				debug!("Failed to get Open Interest: {}", e);
+				debug!("Failed to get Open Interest: {e}");
 			}
 		};
-		match btc_volume_change_handler.await {
+		match volume_result {
 			Ok(btc_volume_change) => new_state.btc_volume_change = Some(btc_volume_change),
 			Err(e) => {
-				debug!("Failed to get BTC Volume: {}", e);
+				debug!("Failed to get BTC Volume: {e}");
 			}
 		};
-		//,}}}
 
 		info!(?new_state);
 		*self_arc.lock().unwrap() = new_state;

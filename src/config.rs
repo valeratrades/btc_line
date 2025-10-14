@@ -6,7 +6,7 @@ use std::{
 
 use config::{ConfigError, File};
 use serde::Deserialize;
-use v_utils::macros::MyConfigPrimitives;
+use v_utils::{macros::MyConfigPrimitives, xdg_state};
 
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct AppConfig {
@@ -23,7 +23,7 @@ pub struct Spy {
 }
 
 impl AppConfig {
-	pub fn try_build(path: &Path) -> Result<Self, ConfigError> {
+	pub fn try_build(path: &Path) -> Result<Self, SettingsError> {
 		let builder = config::Config::builder()
 			.set_default("comparison_offset_h", 24)?
 			.add_source(File::with_name(&path.display().to_string()));
@@ -32,7 +32,14 @@ impl AppConfig {
 		let conf: Self = conf.try_deserialize()?;
 
 		if conf.comparison_offset_h > 24 {
-			return Err(ConfigError::Message("comparison limits above a day are not supported".into()));
+			return Err(ConfigError::Message("comparison limits above a day are not supported".into()).into());
+		}
+
+		{
+			let state_dir = xdg_state!("");
+			if !state_dir.exists() {
+				std::fs::create_dir_all(&state_dir)?;
+			}
 		}
 		Ok(conf)
 	}

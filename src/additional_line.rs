@@ -35,6 +35,47 @@ impl AdditionalLine {
 		}
 	}
 
+	/// # Returns
+	/// if any of the data has been updated, returns `true`
+	pub async fn collect(&mut self) -> ExchangeResult<bool> {
+		let handle_updates = async {
+			let oi_result = self.get_open_interest_change().await;
+			let mut changed = false;
+
+			match oi_result {
+				Ok(open_interest_change) =>
+					if self.open_interest_change.is_none_or(|v| v != open_interest_change) {
+						self.open_interest_change = Some(open_interest_change);
+						changed = true;
+					},
+				Err(e) => {
+					tracing::warn!("Failed to get open interest: {e}");
+				}
+			};
+
+			let volume_result = self.get_btc_volume_change().await;
+
+			match volume_result {
+				Ok(btc_volume_change) =>
+					if self.btc_volume_change.is_none_or(|v| v != btc_volume_change) {
+						self.btc_volume_change = Some(btc_volume_change);
+						changed = true;
+					},
+				Err(e) => {
+					tracing::warn!("Failed to get BTC volume: {e}");
+				}
+			};
+
+			changed
+		};
+
+		let changed = tokio::select! {
+			_ = self.update_interval.tick() => handle_updates.await,
+		};
+
+		Ok(changed)
+	}
+
 	pub fn display(&self, config: &AppConfig) -> String {
 		let mut oi_str = self.open_interest_change.as_ref().map_or("None".to_string(), |v| v.to_string());
 		let mut v_str = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| v.to_string());

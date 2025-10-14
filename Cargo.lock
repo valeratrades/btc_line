@@ -3276,9 +3276,9 @@ dependencies = [
 
 [[package]]
 name = "v_utils"
-version = "2.7.2"
+version = "2.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "123e4c3660a798a5c160e78819bd17dc892ac95a9fc9c27d0f39cfc358522a35"
+checksum = "6004ab599e0ead645eb5c5ed4a1e942b965c7f32bc092417e246c7ac80dd898d"
 dependencies = [
  "const_format",
  "derive-new",
@@ -3304,9 +3304,9 @@ dependencies = [
 
 [[package]]
 name = "v_utils_macros"
-version = "2.3.2"
+version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8dca07fd0eb03a0ac3387ed50357197cedf63d6361f81ec46748a4ecb24a474"
+checksum = "c334134eadb4528235a6c24182c756b5dcb6b242ec698c4b89a659e4ed017e61"
 dependencies = [
  "eyre",
  "heck",

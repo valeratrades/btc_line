@@ -27,7 +27,7 @@ tracing-log = "^0.2.0"
 tracing-subscriber = { version = "^0.3.20", features = ["fmt", "json", "registry", "env-filter"] }
 url = "^2.5.7"
 v_exchanges = { version = "^0.12.1" }
-v_utils = { version = "^2.7.2", features = ["io", "macros"] }
+v_utils = { version = "^2.7.3", features = ["io", "macros"] }
 
 # Random test stuff, for dev purposes only
 [[example]]

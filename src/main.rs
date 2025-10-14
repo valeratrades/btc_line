@@ -5,7 +5,7 @@ pub mod output;
 use std::{rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
-use color_eyre::eyre::Report;
+use color_eyre::eyre::{Report, Result};
 use output::Output;
 use v_exchanges::{ExchangeResult, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
@@ -37,14 +37,14 @@ async fn main() {
 
 	match cli.command {
 		Commands::Start(_) => {
-			let eyre_result = start(settings).await.map_err(Report::from);
+			let eyre_result = start(settings).await;
 			exit_on_error(eyre_result);
 		}
 	}
 }
 
 //Q: should this return ExchangeResult, or actually just wrap over infinite retries?
-async fn start(settings: Settings) -> ExchangeResult<()> {
+async fn start(settings: Settings) -> Result<()> {
 	let settings = Rc::new(settings);
 	let mut output = Output::new(Rc::clone(&settings));
 	let bn = Arc::new(Binance::default());
@@ -56,7 +56,7 @@ async fn start(settings: Settings) -> ExchangeResult<()> {
 	loop {
 		let main_line_updated = main_line.collect().await?;
 		if main_line_updated {
-			output.output(LineName::Main, main_line.display().expect("not sure how that would be recoverable")).await?;
+			output.output(LineName::Main, main_line.display()?).await?;
 		}
 	}
 

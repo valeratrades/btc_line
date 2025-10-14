@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, rc::Rc};
 
-use color_eyre::eyre::{self, Result, bail};
+use color_eyre::eyre::{self, Result, bail, eyre};
 use tracing::instrument;
 use v_utils::define_str_enum;
 
@@ -34,19 +34,21 @@ impl Output {
 
 		let new_value_clone = new_value.clone();
 		let eww_update_handler = async {
-			tokio::process::Command::new("sh")
-				.arg("-c")
-				.arg(format!("eww update btc_line_{name}_str=\"{new_value_clone}\""))
-				.status()
-				.await
-				.map_err(|e| eyre::eyre!(e))?;
+			if self.settings.config()?.outputs.eww {
+				tokio::process::Command::new("sh")
+					.arg("-c")
+					.arg(format!("eww update btc_line_{name}_str=\"{new_value_clone}\""))
+					.status()
+					.await
+					.map_err(|e| eyre::eyre!(e))?;
+			}
 			Ok::<_, eyre::Report>(())
 		};
 
 		let pipe_update_handler = async {
 			let pipe_path = v_utils::xdg_state_file!(name.to_string());
 			if !pipe_path.exists() {
-				let status = tokio::process::Command::new("mkfifo")
+				let status = tokio::process::Command::new("mkfifo") //TODO!!!!: check if this does anything (those are pipes)
 					.arg(pipe_path.display().to_string())
 					.status()
 					.await
@@ -58,13 +60,15 @@ impl Output {
 				}
 			}
 
-			tokio::task::spawn_blocking(move || {
-				if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
-					let _ = writeln!(file, "{new_value}");
-				}
-			})
-			.await
-			.map_err(|e| eyre::eyre!(e))?;
+			if self.settings.config()?.outputs.pipes {
+				tokio::task::spawn_blocking(move || {
+					if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
+						let _ = writeln!(file, "{new_value}");
+					}
+				})
+				.await
+				.map_err(|e| eyre::eyre!(e))?;
+			}
 
 			Ok::<_, eyre::Report>(())
 		};

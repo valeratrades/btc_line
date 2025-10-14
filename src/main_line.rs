@@ -1,70 +1,95 @@
-use std::sync::{Arc, Mutex};
+use std::{
+	sync::Arc,
+	time::{Duration, SystemTime},
+};
 
-use tracing::debug;
-use v_exchanges::prelude::*;
-use v_utils::Percent;
+use v_exchanges::{ExchangeResult, adapters::generics::ws::WsError, prelude::*};
+use v_utils::{Percent, trades::Pair};
 
-use crate::{config::AppConfig, output::Output};
+use crate::config::{AppConfig, Settings, SettingsError};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct MainLine {
-	pub btcusdt: Option<f64>,
-	pub percent_longs: Option<Percent>,
+	settings: Arc<Settings>,
+
+	btcusdt_price: Option<f64>,
+	percent_longs: Option<Percent>,
+
+	lsr_frequency: Duration,
+	lsr_last_pull: SystemTime,
+
+	ws_connection: Box<dyn ExchangeStream<Item = Trade>>,
+	binance_agent: Arc<Binance>,
 }
 impl MainLine {
-	pub fn display(&self, config: &AppConfig) -> String {
-		let price_line = self.btcusdt.map_or("None".to_string(), |v| format!("{v:.0}"));
-		let mut longs_line = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", *v));
+	pub fn try_new(settings: Arc<Settings>, bn: Arc<Binance>) -> ExchangeResult<Self> {
+		let pairs: Vec<Pair> = vec![("BTC", "USDT").into()];
+		let instrument = Instrument::Perp;
+		let ws_connection = bn.ws_trades(pairs, instrument)?;
 
-		if config.label {
-			longs_line = format!("L/S:{longs_line}");
-		}
-
-		format!("{price_line}|{longs_line}")
+		Ok(Self {
+			settings,
+			ws_connection,
+			binance_agent: bn,
+			// defaults {{{
+			btcusdt_price: None,
+			percent_longs: None,
+			lsr_frequency: Duration::default(),
+			lsr_last_pull: std::time::UNIX_EPOCH,
+			//,}}}
+		})
 	}
 
-	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
-		async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
-			let mut connection = exchange.ws_trades(vec![("BTC", "USDT").into()], Instrument::Perp).unwrap();
-			while let Ok(trade_event) = connection.next().await {
-				let price = trade_event.price;
-				let main_line_str = {
-					let mut self_lock = self_arc.lock().unwrap();
-					self_lock.btcusdt = Some(price);
-					self_lock.display(config)
-				};
-				let output_copy = {
-					let mut output_lock = output.lock().unwrap();
-					output_lock.main_line_str = main_line_str;
-					output_lock.clone()
-				};
-				output_copy.out().await.unwrap();
-			}
-		}
-		loop {
-			let handle = binance_websocket_listen(self_arc.clone(), &config, output.clone(), Arc::clone(&exchange));
+	/// # Returns
+	/// if any of the data has been updated, returns `true`
+	pub async fn collect(&mut self) -> ExchangeResult<bool> {
+		let lsr_handler = self.binance_agent.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global);
 
-			handle.await;
-			{
-				let mut lock = self_arc.lock().unwrap();
-				lock.btcusdt = None;
-			}
-			debug!("Restarting Binance Websocket in 30 seconds...");
-			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-		}
-	}
+		let mut changed = false;
 
-	pub async fn collect(self_arc: Arc<Mutex<MainLine>>, bn: Arc<Binance>) {
-		let lsr_handler = bn.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global);
 		let percent_longs: Option<Percent> = match lsr_handler.await {
 			Ok(percent_longs) => Some(*percent_longs[0]),
 			Err(e) => {
-				tracing::warn!("Failed to get LSR: {}", e);
+				tracing::warn!("Failed to get LSR: {e}");
 				None
 			}
 		};
 
-		let mut self_lock = self_arc.lock().unwrap();
-		self_lock.percent_longs = percent_longs;
+		//DO: loop select
+
+		if self.percent_longs != percent_longs {
+			self.percent_longs = percent_longs;
+			changed = true;
+		}
+
+		match changed {
+			true => Ok(true),
+			false => Ok(false),
+		}
+	}
+
+	pub fn display(&self) -> Result<String, SettingsError> {
+		let price_line = self.btcusdt_price.map_or("None".to_string(), |v| format!("{v:.0}"));
+		let mut longs_line = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", *v));
+
+		if self.settings.config()?.label {
+			longs_line = format!("L/S:{longs_line}");
+		}
+
+		let s = format!("{price_line}|{longs_line}");
+		Ok(s)
+	}
+
+	/// returns a closure that would request Lsrs from exchange, if enough time has elapsed since last req
+	async fn lsr_pull(&self) -> impl Fn() -> ExchangeResult<Lsrs> + Send {
+		tokio::time::sleep_until(deadline).await;
+		#[rustfmt::skip]
+		async move || {
+        self.binance_agent.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
+    }
+	}
+
+	async fn trade_ws(&mut self) -> Result<Trade, WsError> {
+		(*self.ws_connection).next().await
 	}
 }

@@ -72,7 +72,7 @@ pub struct Settings {
 	config: RefCell<TimeCapsule<AppConfig>>,
 }
 #[derive(Debug, derive_more::Display, thiserror::Error, derive_more::From)]
-enum SettingsError {
+pub(crate) enum SettingsError {
 	Config(ConfigError),
 	Io(std::io::Error),
 }
@@ -103,8 +103,12 @@ impl Settings {
 				return Ok((*ptr).value.clone());
 			},
 		};
-		let capsule_init: Duration = conf_capsule.init_t.duration_since(system_now).unwrap();
-		if since_source_change < capsule_init {
+		let capsule_age: Duration = conf_capsule.init_t.duration_since(system_now).unwrap();
+		if capsule_age < conf_capsule.upd_freq {
+			return Ok(conf_capsule.value.clone());
+		}
+
+		if since_source_change < capsule_age {
 			conf_capsule.value = AppConfig::try_build(&self.config_path)?;
 		}
 		conf_capsule.init_t = system_now;

@@ -1,10 +1,10 @@
-use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt};
+use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, sync::Arc};
 
 use color_eyre::eyre::{self, Result, bail};
 use tracing::instrument;
 use v_utils::{define_str_enum, xdg_state};
 
-use crate::config::AppConfig;
+use crate::config::Settings;
 
 define_str_enum! {
 	#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
@@ -17,16 +17,20 @@ define_str_enum! {
 
 #[derive(Debug, Default, Clone)]
 pub struct Output {
-	config: AppConfig,
-	values: HashMap<LineName, String>,
+	settings: Arc<Settings>,
+	old_vals: HashMap<LineName, String>,
 }
 impl Output {
+	pub fn new(settings: Arc<Settings>) -> Self {
+		Self { settings, ..Default::default() }
+	}
+
 	#[instrument(skip_all, fields(?name, new_value))]
 	pub async fn output(&mut self, name: LineName, new_value: String) -> Result<()> {
-		if self.values.get(&name).map(|v| v == &new_value).unwrap_or(false) {
+		if self.old_vals.get(&name).map(|v| v == &new_value).unwrap_or(false) {
 			return Ok(());
 		}
-		self.values.insert(name, new_value.clone());
+		self.old_vals.insert(name, new_value.clone());
 
 		let eww_update_handler = async {
 			tokio::process::Command::new("sh")

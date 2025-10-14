@@ -1,12 +1,10 @@
-use std::{
-	sync::Arc,
-	time::{Duration, SystemTime},
-};
+use std::{sync::Arc, time::Duration};
 
+use tokio::time::Interval;
 use v_exchanges::{ExchangeResult, adapters::generics::ws::WsError, prelude::*};
 use v_utils::{Percent, trades::Pair};
 
-use crate::config::{AppConfig, Settings, SettingsError};
+use crate::config::{Settings, SettingsError};
 
 #[derive(Debug)]
 pub struct MainLine {
@@ -15,27 +13,27 @@ pub struct MainLine {
 	btcusdt_price: Option<f64>,
 	percent_longs: Option<Percent>,
 
-	lsr_frequency: Duration,
-	lsr_last_pull: SystemTime,
+	lsr_interval: Interval,
 
 	ws_connection: Box<dyn ExchangeStream<Item = Trade>>,
 	binance_agent: Arc<Binance>,
 }
 impl MainLine {
-	pub fn try_new(settings: Arc<Settings>, bn: Arc<Binance>) -> ExchangeResult<Self> {
+	pub fn try_new(settings: Arc<Settings>, bn: Arc<Binance>, lsr_update_freq: Duration) -> ExchangeResult<Self> {
 		let pairs: Vec<Pair> = vec![("BTC", "USDT").into()];
 		let instrument = Instrument::Perp;
 		let ws_connection = bn.ws_trades(pairs, instrument)?;
+
+		let lsr_interval = tokio::time::interval(lsr_update_freq);
 
 		Ok(Self {
 			settings,
 			ws_connection,
 			binance_agent: bn,
+			lsr_interval,
 			// defaults {{{
 			btcusdt_price: None,
 			percent_longs: None,
-			lsr_frequency: Duration::default(),
-			lsr_last_pull: std::time::UNIX_EPOCH,
 			//,}}}
 		})
 	}
@@ -43,29 +41,44 @@ impl MainLine {
 	/// # Returns
 	/// if any of the data has been updated, returns `true`
 	pub async fn collect(&mut self) -> ExchangeResult<bool> {
-		let lsr_handler = self.binance_agent.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global);
-
 		let mut changed = false;
 
-		let percent_longs: Option<Percent> = match lsr_handler.await {
-			Ok(percent_longs) => Some(*percent_longs[0]),
-			Err(e) => {
-				tracing::warn!("Failed to get LSR: {e}");
-				None
+		tokio::select! {
+			_ = self.lsr_interval.tick() => {
+				let lsr_result = self.binance_agent
+					.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
+					.await;
+
+				let percent_longs: Option<Percent> = match lsr_result {
+					Ok(percent_longs) => Some(*percent_longs[0]),
+					Err(e) => {
+						tracing::warn!("Failed to get LSR: {e}");
+						None
+					}
+				};
+
+				if self.percent_longs != percent_longs {
+					self.percent_longs = percent_longs;
+					changed = true;
+				}
 			}
-		};
-
-		//DO: loop select
-
-		if self.percent_longs != percent_longs {
-			self.percent_longs = percent_longs;
-			changed = true;
+			trade_result = self.ws_connection.next() => {
+				match trade_result {
+					Ok(trade) => {
+						let new_price = Some(trade.price);
+						if self.btcusdt_price != new_price {
+							self.btcusdt_price = new_price;
+							changed = true;
+						}
+					}
+					Err(e) => {
+						tracing::warn!("Failed to get trade: {e}");
+					}
+				}
+			}
 		}
 
-		match changed {
-			true => Ok(true),
-			false => Ok(false),
-		}
+		Ok(changed)
 	}
 
 	pub fn display(&self) -> Result<String, SettingsError> {
@@ -78,18 +91,5 @@ impl MainLine {
 
 		let s = format!("{price_line}|{longs_line}");
 		Ok(s)
-	}
-
-	/// returns a closure that would request Lsrs from exchange, if enough time has elapsed since last req
-	async fn lsr_pull(&self) -> impl Fn() -> ExchangeResult<Lsrs> + Send {
-		tokio::time::sleep_until(deadline).await;
-		#[rustfmt::skip]
-		async move || {
-        self.binance_agent.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
-    }
-	}
-
-	async fn trade_ws(&mut self) -> Result<Trade, WsError> {
-		(*self.ws_connection).next().await
 	}
 }

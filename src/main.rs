@@ -48,7 +48,7 @@ async fn start(settings: Arc<Settings>) -> ExchangeResult<()> {
 	let mut output = Output::new(Arc::clone(&settings));
 	let bn = Arc::new(Binance::default());
 
-	let mut main_line = MainLine::try_new(Arc::clone(&settings), Arc::clone(&bn))?;
+	let mut main_line = MainLine::try_new(Arc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
 	//let additional_line = AdditionalLine::new(settings, bn);
 
 	//dbg

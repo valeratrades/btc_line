@@ -2,14 +2,14 @@ mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
-mod spy_line;
-pub mod utils;
-use std::sync::{Arc, Mutex};
+use std::{
+	rc::Rc,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 
 use clap::{Args, Parser, Subcommand};
-use config::AppConfig;
 use output::Output;
-use tracing::error;
 use v_exchanges::binance::Binance;
 use v_utils::io::ExpandedPath;
 
@@ -34,29 +34,22 @@ struct NoArgs {}
 
 #[tokio::main]
 async fn main() {
-	utils::init_subscriber(None);
+	v_utils::clientside!();
 	let cli = Cli::parse();
-	let config = match AppConfig::new(&cli.config) {
-		Ok(cfg) => cfg,
-		Err(e) => {
-			error!("{:?}", e);
-			std::process::exit(1);
-		}
-	};
-	let settings = Settings::new(config, cli.config.0);
+	let settings = Rc::new(Settings::new(cli.config.0, Duration::from_secs(5)));
 
 	match cli.command {
 		Commands::Start(_) => {
-			let output = Output::new(Arc::clone(settings));
+			let output = Output::new(Rc::clone(&settings));
 
 			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
-			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
+			//let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
 			let additional_line = Arc::new(Mutex::new(additional_line::AdditionalLine::default()));
 			let exchange = Arc::new(Binance::default());
 
 			//TODO!!!: change to [].join() along with main loop. Spawns bad.
 			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), Arc::clone(settings), output.clone(), Arc::clone(&exchange)));
-			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), Arc::clone(settings), output.clone()));
+			//let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), Arc::clone(settings), output.clone()));
 			let mut cycle = 0;
 			loop {
 				{

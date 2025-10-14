@@ -24,6 +24,23 @@ impl MainLine {
 	}
 
 	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
+		async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
+			let mut connection = exchange.ws_trades(vec![("BTC", "USDT").into()], Instrument::Perp).unwrap();
+			while let Ok(trade_event) = connection.next().await {
+				let price = trade_event.price;
+				let main_line_str = {
+					let mut self_lock = self_arc.lock().unwrap();
+					self_lock.btcusdt = Some(price);
+					self_lock.display(config)
+				};
+				let output_copy = {
+					let mut output_lock = output.lock().unwrap();
+					output_lock.main_line_str = main_line_str;
+					output_lock.clone()
+				};
+				output_copy.out().await.unwrap();
+			}
+		}
 		loop {
 			let handle = binance_websocket_listen(self_arc.clone(), &config, output.clone(), Arc::clone(&exchange));
 
@@ -49,17 +66,5 @@ impl MainLine {
 
 		let mut self_lock = self_arc.lock().unwrap();
 		self_lock.percent_longs = percent_longs;
-	}
-}
-
-async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
-	let mut connection = exchange.ws_trades(vec![("BTC", "USDT").into()], Instrument::Perp).unwrap();
-	while let Ok(trade_event) = connection.next().await {
-		let price = trade_event.price;
-		let mut self_lock = self_arc.lock().unwrap();
-		self_lock.btcusdt = Some(price);
-		let mut output_lock = output.lock().unwrap();
-		output_lock.main_line_str = self_lock.display(config);
-		output_lock.out().unwrap();
 	}
 }

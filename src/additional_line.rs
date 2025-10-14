@@ -1,12 +1,11 @@
 use std::{rc::Rc, sync::Arc, time::Duration};
 
-use color_eyre::eyre::{Result, bail};
+use color_eyre::eyre::Result;
 use tokio::time::Interval;
-use tracing::{debug, info};
-use v_exchanges::{Exchange, ExchangeName, ExchangeResult};
+use v_exchanges::{Exchange, ExchangeResult};
 use v_utils::NowThen;
 
-use crate::config::{AppConfig, Settings};
+use crate::config::Settings;
 
 //TODO!: implement tiny graphics
 #[derive(Debug)]

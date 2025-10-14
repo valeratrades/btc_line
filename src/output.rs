@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, rc::Rc};
 
-use color_eyre::eyre::{self, Result, bail, eyre};
+use color_eyre::eyre::{self, Result, bail};
 use tracing::instrument;
 use v_utils::define_str_enum;
 

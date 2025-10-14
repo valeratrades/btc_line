@@ -67,6 +67,7 @@ impl MainLine {
 			match self.ws_connection.next().await {
 				Ok(trade) => {
 					let new_price = Some(trade.price);
+					assert_ne!(trade.price, 0.); //dbg: had it print `&main_line.display()? = "0|0.63"` few times, not sure why
 					if self.btcusdt_price != new_price {
 						self.btcusdt_price = new_price;
 						true
@@ -90,14 +91,14 @@ impl MainLine {
 	}
 
 	pub fn display(&self) -> Result<String, SettingsError> {
-		let price_line = self.btcusdt_price.map_or("None".to_string(), |v| format!("{v:.0}"));
-		let mut longs_line = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", *v));
+		let price = self.btcusdt_price.map_or("None".to_string(), |v| format!("{v:.0}"));
+		let mut lsr = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", *v));
 
 		if self.settings.config()?.label {
-			longs_line = format!("L/S:{longs_line}");
+			lsr = format!("L/S:{lsr}");
 		}
 
-		let s = format!("{price_line}|{longs_line}");
+		let s = format!("{price}|{lsr}");
 		Ok(s)
 	}
 }

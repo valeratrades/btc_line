@@ -5,9 +5,9 @@ pub mod output;
 use std::{rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
-use color_eyre::eyre::{Report, Result};
+use color_eyre::eyre::Result;
 use output::Output;
-use v_exchanges::{ExchangeName, ExchangeResult, binance::Binance};
+use v_exchanges::{ExchangeName, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
 
 use crate::{additional_line::AdditionalLine, config::Settings, main_line::MainLine, output::LineName};
@@ -53,14 +53,24 @@ async fn start(settings: Settings) -> Result<()> {
 	binance_exchange.set_max_tries(3);
 
 	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
-	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(60)); //dbg: should be like 5m
+	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(10)); //dbg: should be like 60s
 
-	//dbg
 	loop {
-		let additional_line_updated = additional_line.collect().await?;
-		if additional_line_updated {
-			output.output(LineName::Additional, additional_line.display()?).await?;
-			dbg!(&output);
+		tokio::select! {
+			result = main_line.collect() => {
+				let main_line_changed = result?;
+				if main_line_changed {
+					output.output(LineName::Main, main_line.display()?).await?;
+					dbg!(&main_line.display()?);
+				}
+			},
+			result = additional_line.collect() => {
+				let additional_line_changed = result?;
+				if additional_line_changed {
+					output.output(LineName::Additional, additional_line.display()?).await?;
+					dbg!(&additional_line.display()?);
+				}
+			},
 		}
 	}
 }

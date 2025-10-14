@@ -1,8 +1,8 @@
-use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, rc::Rc, sync::Arc};
+use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, rc::Rc};
 
 use color_eyre::eyre::{self, Result, bail};
 use tracing::instrument;
-use v_utils::{define_str_enum, xdg_state};
+use v_utils::define_str_enum;
 
 use crate::config::Settings;
 
@@ -32,10 +32,11 @@ impl Output {
 		}
 		self.old_vals.insert(name, new_value.clone());
 
+		let new_value_clone = new_value.clone();
 		let eww_update_handler = async {
 			tokio::process::Command::new("sh")
 				.arg("-c")
-				.arg(format!("eww update btc_line_main_str=\"{name}_line\""))
+				.arg(format!("eww update btc_line_{name}_str=\"{new_value_clone}\""))
 				.status()
 				.await
 				.map_err(|e| eyre::eyre!(e))?;
@@ -43,13 +44,18 @@ impl Output {
 		};
 
 		let pipe_update_handler = async {
-			let pipe_path = xdg_state!(name.to_string());
+			let pipe_path = v_utils::xdg_state_file!(name.to_string());
 			if !pipe_path.exists() {
-				tokio::process::Command::new("mkfifo")
+				let status = tokio::process::Command::new("mkfifo")
 					.arg(pipe_path.display().to_string())
 					.status()
 					.await
 					.map_err(|e| eyre::eyre!(e))?;
+
+				// Ignore "already exists" errors (exit code 1 from mkfifo)
+				if !status.success() && status.code() != Some(1) {
+					bail!("mkfifo failed with status: {status}");
+				}
 			}
 
 			tokio::task::spawn_blocking(move || {

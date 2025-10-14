@@ -6,7 +6,7 @@ use std::{
 
 use config::{ConfigError, File};
 use serde::Deserialize;
-use v_utils::{macros::MyConfigPrimitives, xdg_state};
+use v_utils::macros::MyConfigPrimitives;
 
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct AppConfig {
@@ -33,13 +33,6 @@ impl AppConfig {
 
 		if conf.comparison_offset_h > 24 {
 			return Err(ConfigError::Message("comparison limits above a day are not supported".into()).into());
-		}
-
-		{
-			let state_dir = xdg_state!("");
-			if !state_dir.exists() {
-				std::fs::create_dir_all(&state_dir)?;
-			}
 		}
 		Ok(conf)
 	}
@@ -72,7 +65,7 @@ pub struct Settings {
 	config: RefCell<TimeCapsule<AppConfig>>,
 }
 #[derive(Debug, derive_more::Display, thiserror::Error, derive_more::From)]
-pub(crate) enum SettingsError {
+pub enum SettingsError {
 	Config(ConfigError),
 	Io(std::io::Error),
 }
@@ -92,7 +85,7 @@ impl Settings {
 		let system_now = SystemTime::now();
 		let since_source_change: Duration = {
 			let last_modified: SystemTime = std::fs::metadata(&self.config_path)?.modified()?;
-			last_modified.duration_since(system_now).unwrap()
+			system_now.duration_since(last_modified).unwrap()
 		};
 
 		let mut conf_capsule = match self.config.try_borrow_mut() {
@@ -103,7 +96,7 @@ impl Settings {
 				return Ok((*ptr).value.clone());
 			},
 		};
-		let capsule_age: Duration = conf_capsule.init_t.duration_since(system_now).unwrap();
+		let capsule_age: Duration = system_now.duration_since(conf_capsule.init_t).unwrap();
 		if capsule_age < conf_capsule.upd_freq {
 			return Ok(conf_capsule.value.clone());
 		}

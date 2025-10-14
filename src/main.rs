@@ -10,7 +10,7 @@ use output::Output;
 use v_exchanges::{ExchangeResult, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
 
-use crate::{additional_line::AdditionalLine, config::Settings, main_line::MainLine, output::LineName};
+use crate::{config::Settings, main_line::MainLine, output::LineName};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -57,7 +57,6 @@ async fn start(settings: Settings) -> ExchangeResult<()> {
 		let main_line_updated = main_line.collect().await?;
 		if main_line_updated {
 			output.output(LineName::Main, main_line.display().expect("not sure how that would be recoverable")).await?;
-			dbg!(&output);
 		}
 	}
 

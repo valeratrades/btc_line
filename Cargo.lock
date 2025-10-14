@@ -1467,17 +1467,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "io-uring"
-version = "0.7.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "046fa2d4d00aea763528b4950358d0ead425372445dc8ff86312b3c69ff7727b"
-dependencies = [
- "bitflags",
- "cfg-if",
- "libc",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2810,30 +2799,27 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.47.1"
+version = "1.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89e49afdadebb872d3145a5638b59eb0691ea23e46ca484037cfab3b76b95038"
+checksum = "ff360e02eab121e0bc37a2d3b4d4dc622e6eda3a8e5253d5435ecf5bd4c68408"
 dependencies = [
- "backtrace",
  "bytes",
- "io-uring",
  "libc",
  "mio",
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
- "slab",
  "socket2 0.6.1",
  "tokio-macros",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "tokio-macros"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e06d43f1345a3bcd39f6a56dbb7dcab2ba47e68e8ac134855e7e2bdbaf8cab8"
+checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3217,9 +3203,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "v_exchanges"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4c010a8c8cc37a8beccbf85f0b0d42b9f80446d848f884fa05bc45283876c8d"
+checksum = "862b61239ac5a92cb3ceaa82abd9ac2b44dee677fd07c40c3210bccaaab9ac49"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -3242,9 +3228,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_adapters"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffc88e68bff832e71884df9d4a87c79084d922d9ec3059b018853a2144ac9f44"
+checksum = "7f55b4a3b46264a8964bed587214c28d264b9766fd6176f636a2e9821d0d5f1e"
 dependencies = [
  "derive-new",
  "derive_more",
@@ -3267,9 +3253,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_api_generics"
-version = "0.13.7"
+version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06495adb91a6fdbc1c6db8854269962e0758204de35030c918dd00a529cf6c0"
+checksum = "8d2cb3f70e053b52473d1b042bf352bf270a1f49a03db68985a9ad2c95584360"
 dependencies = [
  "bytes",
  "derive-new",
@@ -3291,9 +3277,9 @@ dependencies = [
 
 [[package]]
 name = "v_utils"
-version = "2.6.13"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c83a410bb221f6559618189de6688f4e1ea23521270abdb80182054992c3b1"
+checksum = "d8a2da56a731028809fbfbb0950bfcd62dbf878d17bcac0717bea596842771ad"
 dependencies = [
  "const_format",
  "derive-new",
@@ -3319,9 +3305,9 @@ dependencies = [
 
 [[package]]
 name = "v_utils_macros"
-version = "2.2.13"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "062a0fcda6a1969c2d9cd0e2031365273438ce8952f4fa41415597c26e35a2c5"
+checksum = "ba7ec81ce62e7ef2efecb9d8964114875c75a7a02186ec1d0b50a5ac6f5da161"
 dependencies = [
  "eyre",
  "heck",

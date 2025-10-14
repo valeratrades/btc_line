@@ -15,7 +15,6 @@ pub struct SpyLine {
 	//TODO!: have another loop that updates spy_price to None if last timestamp is more than 60s old.
 	last_message_timestamp: DateTime<Utc>,
 }
-
 impl SpyLine {
 	pub fn display(&self) -> String {
 		self.spy_price.map_or_else(|| "".to_string(), |v| format!("{:.2}", v))

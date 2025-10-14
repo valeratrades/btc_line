@@ -18,7 +18,7 @@ pub struct Output {
 impl Output {
 	pub fn out(&self) -> Result<()> {
 		// Create /tmp/btc_line directory if it doesn't exist
-		let pipe_dir = xdg_state!("btc_line");
+		let pipe_dir = xdg_state!("");
 		if !pipe_dir.exists() {
 			fs::create_dir_all(&pipe_dir)?;
 		}
@@ -89,7 +89,6 @@ impl Output {
 		{
 			if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
 				let _ = writeln!(file, "{content}");
-				// file is automatically dropped here when scope ends
 			}
 		}
 

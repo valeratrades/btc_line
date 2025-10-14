@@ -37,6 +37,7 @@ async fn main() {
 
 	match cli.command {
 		Commands::Start(_) => {
+			//TODO!!!!!!!!: specify set of errors on which we just wait 30s and retry
 			let eyre_result = start(settings).await;
 			exit_on_error(eyre_result);
 		}
@@ -61,14 +62,12 @@ async fn start(settings: Settings) -> Result<()> {
 				let main_line_changed = result?;
 				if main_line_changed {
 					output.output(LineName::Main, main_line.display()?).await?;
-					dbg!(&main_line.display()?);
 				}
 			},
 			result = additional_line.collect() => {
 				let additional_line_changed = result?;
 				if additional_line_changed {
 					output.output(LineName::Additional, additional_line.display()?).await?;
-					dbg!(&additional_line.display()?);
 				}
 			},
 		}

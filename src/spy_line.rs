@@ -158,12 +158,13 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 		loop {
 			if refresh_arc.lock().unwrap().last_message_timestamp < Utc::now() - chrono::Duration::seconds(10 * 60) && refresh_arc.lock().unwrap().spy_price.is_some() {
 				refresh_arc.lock().unwrap().spy_price = None;
-				{
+				let output_copy = {
 					let mut output_lock = refresh_output.lock().unwrap();
 					output_lock.spy_line_str = "".to_string();
-					if let Err(e) = output_lock.out() {
-						error!("Failed to update output in refresh task: {}", e);
-					}
+					output_lock.clone()
+				};
+				if let Err(e) = output_copy.out().await {
+					error!("Failed to update output in refresh task: {}", e);
 				}
 			}
 			tokio::time::sleep(tokio::time::Duration::from_secs(5 * 60)).await;
@@ -204,19 +205,19 @@ async fn spy_websocket_listen(self_arc: Arc<Mutex<SpyLine>>, output: Arc<Mutex<O
 				Ok(alpaca_trades) => {
 					let alpaca_trade = &alpaca_trades[0];
 					if alpaca_trade.symbol == "SPY" {
-						let spy_str: String;
-						{
+						let spy_str = {
 							let mut lock = self_arc.lock().unwrap();
 							lock.spy_price = Some(alpaca_trade.trade_price);
 							lock.last_message_timestamp = Utc::now();
-							spy_str = lock.display();
-						}
-						{
+							lock.display()
+						};
+						let output_copy = {
 							let mut output_lock = output.lock().unwrap();
 							output_lock.spy_line_str = spy_str;
-							if let Err(e) = output_lock.out() {
-								error!("Failed to update output: {}", e);
-							}
+							output_lock.clone()
+						};
+						if let Err(e) = output_copy.out().await {
+							error!("Failed to update output: {}", e);
 						}
 					}
 				}

@@ -70,7 +70,7 @@ async fn main() {
 					let mut output_lock = output.lock().unwrap();
 					output_lock.main_line_str = main_line_str;
 					output_lock.additional_line_str = additional_line_str;
-					output_lock.out().unwrap();
+					output_lock.out().await.unwrap();
 				}
 
 				cycle += 1;

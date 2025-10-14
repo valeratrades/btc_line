@@ -7,10 +7,10 @@ use std::{rc::Rc, sync::Arc, time::Duration};
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::{Report, Result};
 use output::Output;
-use v_exchanges::{ExchangeResult, binance::Binance};
+use v_exchanges::{ExchangeName, ExchangeResult, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
 
-use crate::{config::Settings, main_line::MainLine, output::LineName};
+use crate::{additional_line::AdditionalLine, config::Settings, main_line::MainLine, output::LineName};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -49,16 +49,25 @@ async fn start(settings: Settings) -> Result<()> {
 	let mut output = Output::new(Rc::clone(&settings));
 	let bn = Arc::new(Binance::default());
 
+	let mut binance_exchange = ExchangeName::Binance.init_client();
+	binance_exchange.set_max_tries(3);
+
 	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
-	//let additional_line = AdditionalLine::new(settings, bn);
+	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(10)); //dbg: should be like 5m
+
+	let vol = additional_line.get_btc_volume_change().await?;
+	let oi = additional_line.get_open_interest_change().await?;
+	dbg!(&vol, &oi);
+
+	Ok(())
 
 	//dbg
-	loop {
-		let main_line_updated = main_line.collect().await?;
-		if main_line_updated {
-			output.output(LineName::Main, main_line.display()?).await?;
-		}
-	}
+	//loop {
+	//	let main_line_updated = main_line.collect().await?;
+	//	if main_line_updated {
+	//		output.output(LineName::Main, main_line.display()?).await?;
+	//	}
+	//}
 
 	//let mut cycle = 0;
 	//loop {

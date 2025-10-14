@@ -26,23 +26,40 @@ impl Output {
 		if self.values.get(&name).map(|v| v == &new_value).unwrap_or(false) {
 			return Ok(());
 		}
-		self.values.insert(name, new_value);
+		self.values.insert(name, new_value.clone());
 
-		let eww_update_handler = tokio::process::Command::new("sh").arg("-c").arg(format!("eww update btc_line_main_str=\"{name}_line\"")).status();
+		let eww_update_handler = async {
+			tokio::process::Command::new("sh")
+				.arg("-c")
+				.arg(format!("eww update btc_line_main_str=\"{name}_line\""))
+				.status()
+				.await
+				.map_err(|e| eyre::eyre!(e))?;
+			Ok::<_, eyre::Report>(())
+		};
 
-		let pipe_update_handler = {
+		let pipe_update_handler = async {
 			let pipe_path = xdg_state!(name.to_string());
 			if !pipe_path.exists() {
-				tokio::process::Command::new("mkfifo").arg(pipe_path.display().to_string()).status().await?;
+				tokio::process::Command::new("mkfifo")
+					.arg(pipe_path.display().to_string())
+					.status()
+					.await
+					.map_err(|e| eyre::eyre!(e))?;
 			}
 
-			{
+			tokio::task::spawn_blocking(move || {
 				if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
 					let _ = writeln!(file, "{new_value}");
 				}
-			}
+			})
+			.await
+			.map_err(|e| eyre::eyre!(e))?;
+
+			Ok::<_, eyre::Report>(())
 		};
 
-		tokio::try_join!(eww_update_handler, pipe_update_handler)
+		tokio::try_join!(eww_update_handler, pipe_update_handler)?;
+		Ok(())
 	}
 }

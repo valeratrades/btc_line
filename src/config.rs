@@ -12,8 +12,16 @@ use v_utils::macros::MyConfigPrimitives;
 pub struct AppConfig {
 	pub spy: Spy,
 	pub comparison_offset_h: usize,
+	/// whether to label the displayed values, or (false ->) assume user's acquaintance with the layout
 	pub label: bool,
-	pub output: String,
+	pub outputs: Outputs,
+}
+
+#[derive(Clone, Debug, smart_default::SmartDefault, MyConfigPrimitives)]
+pub struct Outputs {
+	pub eww: bool,
+	#[default(true)]
+	pub pipes: bool,
 }
 
 #[derive(Clone, Debug, Default, MyConfigPrimitives)]

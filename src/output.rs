@@ -1,11 +1,12 @@
-use std::{fs, io::Write, os::unix::fs::OpenOptionsExt, path::Path};
+use std::{fs, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 
 use color_eyre::eyre::Result;
 use tracing::instrument;
+use v_utils::xdg_state;
 
 use crate::config::AppConfig;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Output {
 	config: AppConfig,
 	pub main_line_str: String,
@@ -17,9 +18,9 @@ pub struct Output {
 impl Output {
 	pub fn out(&self) -> Result<()> {
 		// Create /tmp/btc_line directory if it doesn't exist
-		let pipe_dir = "/tmp/btc_line";
-		if !Path::new(pipe_dir).exists() {
-			fs::create_dir_all(pipe_dir)?;
+		let pipe_dir = xdg_state!("btc_line");
+		if !pipe_dir.exists() {
+			fs::create_dir_all(&pipe_dir)?;
 		}
 
 		// Write to named pipes in parallel with eww updates
@@ -53,13 +54,18 @@ impl Output {
 		// Write to named pipes
 		let pipe_handle = {
 			let main_line = self.main_line_str.clone();
+			let main_file = pipe_dir.join("main");
+
 			let spy_line = self.spy_line_str.clone();
+			let spy_file = pipe_dir.join("spy");
+
 			let additional_line = self.additional_line_str.clone();
+			let additional_file = pipe_dir.join("additional");
 
 			std::thread::spawn(move || -> Result<()> {
-				Self::write_to_pipe(&format!("{pipe_dir}/main"), &main_line)?;
-				Self::write_to_pipe(&format!("{pipe_dir}/spy"), &spy_line)?;
-				Self::write_to_pipe(&format!("{pipe_dir}/additional"), &additional_line)?;
+				Self::write_to_pipe(main_file, &main_line)?;
+				Self::write_to_pipe(spy_file, &spy_line)?;
+				Self::write_to_pipe(additional_file, &additional_line)?;
 				Ok(())
 			})
 		};
@@ -74,29 +80,23 @@ impl Output {
 	}
 
 	#[instrument]
-	fn write_to_pipe(pipe_path: &str, content: &str) -> Result<()> {
+	fn write_to_pipe(pipe_path: PathBuf, content: &str) -> Result<()> {
 		// Create named pipe if it doesn't exist
-		if !Path::new(pipe_path).exists() {
-			std::process::Command::new("mkfifo").arg(pipe_path).status()?;
+		if !pipe_path.exists() {
+			std::process::Command::new("mkfifo").arg(pipe_path.display().to_string()).status()?;
 		}
 
-		// Write to pipe with non-blocking I/O and explicit scope for immediate file closure
 		{
 			if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
 				let _ = writeln!(file, "{content}");
 				// file is automatically dropped here when scope ends
 			}
-		} // Explicit scope ensures file handle is closed immediately
+		}
 
 		Ok(())
 	}
 
 	pub fn new(config: AppConfig) -> Self {
-		Self {
-			config,
-			main_line_str: "".to_string(),
-			spy_line_str: "".to_string(),
-			additional_line_str: "".to_string(),
-		}
+		Self { config, ..Default::default() }
 	}
 }

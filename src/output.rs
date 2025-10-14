@@ -50,6 +50,52 @@ impl Output {
 
 			if self.settings.config()?.outputs.pipes {
 				tokio::fs::write(&file_path, format!("{new_value}\n")).await.map_err(|e| eyre::eyre!(e))?;
+
+				// Update timestamp file
+				let timestamp_path = v_utils::xdg_state_file!(".timestamps");
+				let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| eyre::eyre!(e))?.as_secs();
+
+				// Format as ISO8601 manually
+				let secs_since_epoch = timestamp;
+				let days = secs_since_epoch / 86400;
+				let rem = secs_since_epoch % 86400;
+				let hours = rem / 3600;
+				let mins = (rem % 3600) / 60;
+				let secs = rem % 60;
+
+				// Days since Unix epoch (1970-01-01) to approximate date
+				let year = 1970 + (days / 365);
+				let day_of_year = days % 365;
+				let month = 1 + (day_of_year / 30); // Rough approximation
+				let day = 1 + (day_of_year % 30);
+
+				let timestamp_iso = format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", year, month, day, hours, mins, secs);
+				let name_str = name.to_string();
+				let line_to_write = format!("{name_str}: {timestamp_iso}");
+
+				if timestamp_path.exists() {
+					let content = tokio::fs::read_to_string(&timestamp_path).await.map_err(|e| eyre::eyre!(e))?;
+					let mut lines: Vec<String> = content.lines().map(String::from).collect();
+
+					let mut found = false;
+					for line in &mut lines {
+						if let Some((line_name, _)) = line.split_once(": ") {
+							if line_name == name_str {
+								*line = line_to_write.clone();
+								found = true;
+								break;
+							}
+						}
+					}
+
+					if !found {
+						lines.push(line_to_write);
+					}
+
+					tokio::fs::write(&timestamp_path, lines.join("\n") + "\n").await.map_err(|e| eyre::eyre!(e))?;
+				} else {
+					tokio::fs::write(&timestamp_path, format!("{line_to_write}\n")).await.map_err(|e| eyre::eyre!(e))?;
+				}
 			}
 
 			Ok::<_, eyre::Report>(())

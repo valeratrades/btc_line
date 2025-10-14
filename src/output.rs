@@ -1,6 +1,6 @@
-use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
-use color_eyre::eyre::{self, Result, bail};
+use color_eyre::eyre::{self, Result};
 use tracing::instrument;
 use v_utils::define_str_enum;
 
@@ -45,35 +45,17 @@ impl Output {
 			Ok::<_, eyre::Report>(())
 		};
 
-		let pipe_update_handler = async {
-			let pipe_path = v_utils::xdg_state_file!(name.to_string());
-			if !pipe_path.exists() {
-				let status = tokio::process::Command::new("mkfifo") //TODO!!!!: check if this does anything (those are pipes)
-					.arg(pipe_path.display().to_string())
-					.status()
-					.await
-					.map_err(|e| eyre::eyre!(e))?;
-
-				// Ignore "already exists" errors (exit code 1 from mkfifo)
-				if !status.success() && status.code() != Some(1) {
-					bail!("mkfifo failed with status: {status}");
-				}
-			}
+		let file_update_handler = async {
+			let file_path = v_utils::xdg_state_file!(name.to_string());
 
 			if self.settings.config()?.outputs.pipes {
-				tokio::task::spawn_blocking(move || {
-					if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
-						let _ = writeln!(file, "{new_value}");
-					}
-				})
-				.await
-				.map_err(|e| eyre::eyre!(e))?;
+				tokio::fs::write(&file_path, format!("{new_value}\n")).await.map_err(|e| eyre::eyre!(e))?;
 			}
 
 			Ok::<_, eyre::Report>(())
 		};
 
-		tokio::try_join!(eww_update_handler, pipe_update_handler)?;
+		tokio::try_join!(eww_update_handler, file_update_handler)?;
 		Ok(())
 	}
 }

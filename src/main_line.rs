@@ -1,7 +1,7 @@
 use std::{rc::Rc, sync::Arc, time::Duration};
 
 use tokio::time::Interval;
-use v_exchanges::{ExchangeResult, prelude::*};
+use v_exchanges::{Binance, Exchange as _, ExchangeResult, ExchangeStream, Instrument, Trade};
 use v_utils::{Percent, trades::Pair};
 
 use crate::config::{Settings, SettingsError};
@@ -66,9 +66,15 @@ impl MainLine {
 		let handle_trade = async {
 			match self.ws_connection.next().await {
 				Ok(trade) => {
-					let new_price = Some(trade.price);
-					assert_ne!(trade.price, 0.); //dbg: had it print `&main_line.display()? = "0|0.63"` few times, not sure why
-					if self.btcusdt_price != new_price {
+					//HACK: for some reason, this endpoint returns some trades with `qty_asset: 0.0` and `price: 0.0`. Might be an error on side of `v_exchanges`
+					let new_price = match trade.qty_asset {
+						0.0 => {
+							tracing::warn!("received a weird 0-ed Trade from ws: {trade:?}\nCould this be fault of v_exchanges?");
+							None
+						}
+						_ => Some(trade.price),
+					};
+					if new_price.is_some() && self.btcusdt_price != new_price {
 						self.btcusdt_price = new_price;
 						true
 					} else {

@@ -1,102 +1,61 @@
-use std::{fs, io::Write, os::unix::fs::OpenOptionsExt, path::Path};
+use std::{collections::HashMap, rc::Rc};
 
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{self, Result};
 use tracing::instrument;
+use v_utils::define_str_enum;
 
-use crate::config::AppConfig;
+use crate::config::Settings;
 
-#[derive(Debug)]
-pub struct Output {
-	config: AppConfig,
-	pub main_line_str: String,
-	pub spy_line_str: String,
-	pub additional_line_str: String,
+define_str_enum! {
+	#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+	pub enum LineName {
+		Additional => "additional",
+		Main => "main",
+		Spy => "spy",
+	}
 }
 
-//? potentially, could store last modified for every value, subsequently that all of them are recent enough when called from the main loop.
+#[derive(Debug, Default, Clone)]
+pub struct Output {
+	settings: Rc<Settings>,
+	old_vals: HashMap<LineName, String>,
+}
 impl Output {
-	pub fn out(&self) -> Result<()> {
-		// Create /tmp/btc_line directory if it doesn't exist
-		let pipe_dir = "/tmp/btc_line";
-		if !Path::new(pipe_dir).exists() {
-			fs::create_dir_all(pipe_dir)?;
-		}
-
-		// Write to named pipes in parallel with eww updates
-		let main_line = self.main_line_str.clone();
-		let spy_line = self.spy_line_str.clone();
-		let additional_line = self.additional_line_str.clone();
-
-		// Spawn threads for parallel execution
-		let eww_handle = if self.config.output == *"eww" {
-			Some(std::thread::spawn(move || {
-				std::process::Command::new("sh")
-					.arg("-c")
-					.arg(format!("eww update btc_line_main_str=\"{main_line}\""))
-					.status()
-					.expect("eww daemon is not running");
-				std::process::Command::new("sh")
-					.arg("-c")
-					.arg(format!("eww update btc_line_spy_str=\"{spy_line}\""))
-					.status()
-					.expect("eww daemon is not running");
-				std::process::Command::new("sh")
-					.arg("-c")
-					.arg(format!("eww update btc_line_additional_str=\"{additional_line}\""))
-					.status()
-					.expect("eww daemon is not running");
-			}))
-		} else {
-			None
-		};
-
-		// Write to named pipes
-		let pipe_handle = {
-			let main_line = self.main_line_str.clone();
-			let spy_line = self.spy_line_str.clone();
-			let additional_line = self.additional_line_str.clone();
-
-			std::thread::spawn(move || -> Result<()> {
-				Self::write_to_pipe(&format!("{pipe_dir}/main"), &main_line)?;
-				Self::write_to_pipe(&format!("{pipe_dir}/spy"), &spy_line)?;
-				Self::write_to_pipe(&format!("{pipe_dir}/additional"), &additional_line)?;
-				Ok(())
-			})
-		};
-
-		// Wait for both operations to complete
-		if let Some(handle) = eww_handle {
-			handle.join().unwrap();
-		}
-		pipe_handle.join().unwrap()?;
-
-		Ok(())
+	pub fn new(settings: Rc<Settings>) -> Self {
+		Self { settings, ..Default::default() }
 	}
 
-	#[instrument]
-	fn write_to_pipe(pipe_path: &str, content: &str) -> Result<()> {
-		// Create named pipe if it doesn't exist
-		if !Path::new(pipe_path).exists() {
-			std::process::Command::new("mkfifo").arg(pipe_path).status()?;
+	#[instrument(skip_all, fields(?name, new_value))]
+	pub async fn output(&mut self, name: LineName, new_value: String) -> Result<()> {
+		if self.old_vals.get(&name).map(|v| v == &new_value).unwrap_or(false) {
+			return Ok(());
 		}
+		self.old_vals.insert(name, new_value.clone());
 
-		// Write to pipe with non-blocking I/O and explicit scope for immediate file closure
-		{
-			if let Ok(mut file) = std::fs::OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(pipe_path) {
-				let _ = writeln!(file, "{content}");
-				// file is automatically dropped here when scope ends
+		let new_value_clone = new_value.clone();
+		let eww_update_handler = async {
+			if self.settings.config()?.outputs.eww {
+				tokio::process::Command::new("sh")
+					.arg("-c")
+					.arg(format!("eww update btc_line_{name}_str=\"{new_value_clone}\""))
+					.status()
+					.await
+					.map_err(|e| eyre::eyre!(e))?;
 			}
-		} // Explicit scope ensures file handle is closed immediately
+			Ok::<_, eyre::Report>(())
+		};
 
+		let file_update_handler = async {
+			let file_path = v_utils::xdg_state_file!(name.to_string());
+
+			if self.settings.config()?.outputs.pipes {
+				tokio::fs::write(&file_path, format!("{new_value}\n")).await.map_err(|e| eyre::eyre!(e))?;
+			}
+
+			Ok::<_, eyre::Report>(())
+		};
+
+		tokio::try_join!(eww_update_handler, file_update_handler)?;
 		Ok(())
-	}
-
-	pub fn new(config: AppConfig) -> Self {
-		Self {
-			config,
-			main_line_str: "".to_string(),
-			spy_line_str: "".to_string(),
-			additional_line_str: "".to_string(),
-		}
 	}
 }

@@ -2,16 +2,15 @@ mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
-mod spy_line;
-pub mod utils;
-use std::sync::{Arc, Mutex};
+use std::{rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
-use config::AppConfig;
+use color_eyre::eyre::Result;
 use output::Output;
-use tracing::error;
-use v_exchanges::binance::Binance;
-use v_utils::io::ExpandedPath;
+use v_exchanges::{ExchangeName, binance::Binance};
+use v_utils::{io::ExpandedPath, utils::exit_on_error};
+
+use crate::{additional_line::AdditionalLine, config::Settings, main_line::MainLine, output::LineName};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -32,53 +31,45 @@ struct NoArgs {}
 
 #[tokio::main]
 async fn main() {
-	utils::init_subscriber(None);
+	v_utils::clientside!();
 	let cli = Cli::parse();
-	let config = match AppConfig::new(cli.config) {
-		Ok(cfg) => cfg,
-		Err(e) => {
-			error!("{:?}", e);
-			std::process::exit(1);
-		}
-	};
+	let settings = Settings::new(cli.config.0, Duration::from_secs(5));
 
 	match cli.command {
 		Commands::Start(_) => {
-			let output = Arc::new(Mutex::new(Output::new(config.clone())));
+			//TODO!!!!!!!!: specify set of errors on which we just wait 30s and retry
+			let eyre_result = start(settings).await;
+			exit_on_error(eyre_result);
+		}
+	}
+}
 
-			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
-			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
-			let additional_line = Arc::new(Mutex::new(additional_line::AdditionalLine::default()));
-			let exchange = Arc::new(Binance::default());
+//Q: should this return ExchangeResult, or actually just wrap over infinite retries?
+async fn start(settings: Settings) -> Result<()> {
+	let settings = Rc::new(settings);
+	let mut output = Output::new(Rc::clone(&settings));
+	let bn = Arc::new(Binance::default());
 
-			//TODO!!!: change to [].join() along with main loop. Spawns bad.
-			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone(), Arc::clone(&exchange)));
-			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
-			let mut cycle = 0;
-			loop {
-				{
-					let main_line_handler = main_line::MainLine::collect(Arc::clone(&main_line), Arc::clone(&exchange));
-					let additional_line_handler = additional_line::AdditionalLine::collect(additional_line.clone(), &config);
+	let mut binance_exchange = ExchangeName::Binance.init_client();
+	binance_exchange.set_max_tries(3);
 
-					let _ = main_line_handler.await;
-					let _ = additional_line_handler.await;
+	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
+	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(10)); //dbg: should be like 60s
+
+	loop {
+		tokio::select! {
+			result = main_line.collect() => {
+				let main_line_changed = result?;
+				if main_line_changed {
+					output.output(LineName::Main, main_line.display()?).await?;
 				}
-
-				{
-					let main_line_str = { main_line.lock().unwrap().display(&config) };
-					let additional_line_str = { additional_line.lock().unwrap().display(&config) };
-					let mut output_lock = output.lock().unwrap();
-					output_lock.main_line_str = main_line_str;
-					output_lock.additional_line_str = additional_line_str;
-					output_lock.out().unwrap();
+			},
+			result = additional_line.collect() => {
+				let additional_line_changed = result?;
+				if additional_line_changed {
+					output.output(LineName::Additional, additional_line.display()?).await?;
 				}
-
-				cycle += 1;
-				if cycle == 15 {
-					cycle = 1; // rolls to 1, so I can make special cases for 0
-				}
-				tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-			}
+			},
 		}
 	}
 }

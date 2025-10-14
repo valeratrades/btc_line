@@ -1,65 +1,110 @@
-use std::sync::{Arc, Mutex};
+use std::{rc::Rc, sync::Arc, time::Duration};
 
-use tracing::debug;
-use v_exchanges::prelude::*;
-use v_utils::Percent;
+use tokio::time::Interval;
+use v_exchanges::{Binance, Exchange as _, ExchangeResult, ExchangeStream, Instrument, Trade};
+use v_utils::{Percent, trades::Pair};
 
-use crate::{config::AppConfig, output::Output};
+use crate::config::{Settings, SettingsError};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct MainLine {
-	pub btcusdt: Option<f64>,
-	pub percent_longs: Option<Percent>,
+	settings: Rc<Settings>,
+
+	btcusdt_price: Option<f64>,
+	percent_longs: Option<Percent>,
+
+	lsr_interval: Interval,
+
+	ws_connection: Box<dyn ExchangeStream<Item = Trade>>,
+	binance_agent: Arc<Binance>,
 }
 impl MainLine {
-	pub fn display(&self, config: &AppConfig) -> String {
-		let price_line = self.btcusdt.map_or("None".to_string(), |v| format!("{v:.0}"));
-		let mut longs_line = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", *v));
+	pub fn try_new(settings: Rc<Settings>, bn: Arc<Binance>, lsr_update_freq: Duration) -> ExchangeResult<Self> {
+		let pairs: Vec<Pair> = vec![("BTC", "USDT").into()];
+		let instrument = Instrument::Perp;
+		let ws_connection = bn.ws_trades(pairs, instrument)?;
 
-		if config.label {
-			longs_line = format!("L/S:{longs_line}");
-		}
+		let lsr_interval = tokio::time::interval(lsr_update_freq);
 
-		format!("{price_line}|{longs_line}")
+		Ok(Self {
+			settings,
+			ws_connection,
+			binance_agent: bn,
+			lsr_interval,
+			// defaults {{{
+			btcusdt_price: None,
+			percent_longs: None,
+			//,}}}
+		})
 	}
 
-	pub async fn websocket(self_arc: Arc<Mutex<Self>>, config: AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
-		loop {
-			let handle = binance_websocket_listen(self_arc.clone(), &config, output.clone(), Arc::clone(&exchange));
+	/// # Returns
+	/// if any of the data has been updated, returns `true`
+	pub async fn collect(&mut self) -> ExchangeResult<bool> {
+		let handle_lsr = async {
+			let lsr_result = self
+				.binance_agent
+				.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
+				.await;
 
-			handle.await;
-			{
-				let mut lock = self_arc.lock().unwrap();
-				lock.btcusdt = None;
-			}
-			debug!("Restarting Binance Websocket in 30 seconds...");
-			tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-		}
-	}
+			let percent_longs: Option<Percent> = match lsr_result {
+				Ok(percent_longs) => Some(*percent_longs[0]),
+				Err(e) => {
+					tracing::warn!("Failed to get LSR: {e}");
+					None
+				}
+			};
 
-	pub async fn collect(self_arc: Arc<Mutex<MainLine>>, bn: Arc<Binance>) {
-		let lsr_handler = bn.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global);
-		let percent_longs: Option<Percent> = match lsr_handler.await {
-			Ok(percent_longs) => Some(*percent_longs[0]),
-			Err(e) => {
-				tracing::warn!("Failed to get LSR: {}", e);
-				None
+			if self.percent_longs != percent_longs {
+				self.percent_longs = percent_longs;
+				true
+			} else {
+				false
 			}
 		};
 
-		let mut self_lock = self_arc.lock().unwrap();
-		self_lock.percent_longs = percent_longs;
-	}
-}
+		let handle_trade = async {
+			match self.ws_connection.next().await {
+				Ok(trade) => {
+					//HACK: for some reason, this endpoint returns some trades with `qty_asset: 0.0` and `price: 0.0`. Might be an error on side of `v_exchanges`
+					let new_price = match trade.qty_asset {
+						0.0 => {
+							tracing::warn!("received a weird 0-ed Trade from ws: {trade:?}\nCould this be fault of v_exchanges?");
+							None
+						}
+						_ => Some(trade.price),
+					};
+					if new_price.is_some() && self.btcusdt_price != new_price {
+						self.btcusdt_price = new_price;
+						true
+					} else {
+						false
+					}
+				}
+				Err(e) => {
+					tracing::warn!("Failed to get trade: {e}");
+					false
+				}
+			}
+		};
 
-async fn binance_websocket_listen(self_arc: Arc<Mutex<MainLine>>, config: &AppConfig, output: Arc<Mutex<Output>>, exchange: Arc<Binance>) {
-	let mut connection = exchange.ws_trades(vec![("BTC", "USDT").into()], Instrument::Perp).unwrap();
-	while let Ok(trade_event) = connection.next().await {
-		let price = trade_event.price;
-		let mut self_lock = self_arc.lock().unwrap();
-		self_lock.btcusdt = Some(price);
-		let mut output_lock = output.lock().unwrap();
-		output_lock.main_line_str = self_lock.display(config);
-		output_lock.out().unwrap();
+		let changed = tokio::select! {
+			_ = self.lsr_interval.tick() => handle_lsr.await,
+			changed = handle_trade => changed,
+		};
+
+		Ok(changed)
+	}
+
+	pub fn display(&self) -> Result<String, SettingsError> {
+		let price = self.btcusdt_price.map_or("None".to_string(), |v| format!("{v:.0}"));
+		let mut lsr = self.percent_longs.map_or("".to_string(), |v| format!("{:.2}", *v));
+
+		if self.settings.config()?.label {
+			lsr = format!("L/S:{lsr}");
+		}
+
+		let s = format!("{price}|{lsr}");
+		Ok(s)
 	}
 }

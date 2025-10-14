@@ -53,39 +53,14 @@ async fn start(settings: Settings) -> Result<()> {
 	binance_exchange.set_max_tries(3);
 
 	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
-	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(10)); //dbg: should be like 5m
-
-	let vol = additional_line.get_btc_volume_change().await?;
-	let oi = additional_line.get_open_interest_change().await?;
-	dbg!(&vol, &oi);
-
-	Ok(())
+	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(60)); //dbg: should be like 5m
 
 	//dbg
-	//loop {
-	//	let main_line_updated = main_line.collect().await?;
-	//	if main_line_updated {
-	//		output.output(LineName::Main, main_line.display()?).await?;
-	//	}
-	//}
-
-	//let mut cycle = 0;
-	//loop {
-	//	{
-	//		let main_line_str = { main_line.lock().unwrap().display(&config) };
-	//		let additional_line_str = { additional_line.lock().unwrap().display(&config) };
-	//		let mut output_lock = output.lock().unwrap();
-	//		output_lock.main_line_str = main_line_str;
-	//		output_lock.additional_line_str = additional_line_str;
-	//		output_lock.out().await.unwrap();
-	//	}
-	//
-	//	cycle += 1;
-	//	if cycle == 15 {
-	//		cycle = 1; // rolls to 1, so I can make special cases for 0
-	//	}
-	//	tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-	//
-	//	Ok(())
-	//}
+	loop {
+		let additional_line_updated = additional_line.collect().await?;
+		if additional_line_updated {
+			output.output(LineName::Additional, additional_line.display()?).await?;
+			dbg!(&output);
+		}
+	}
 }

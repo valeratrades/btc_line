@@ -1,14 +1,14 @@
-use std::{sync::Arc, time::Duration};
+use std::{rc::Rc, sync::Arc, time::Duration};
 
 use tokio::time::Interval;
-use v_exchanges::{ExchangeResult, adapters::generics::ws::WsError, prelude::*};
+use v_exchanges::{ExchangeResult, prelude::*};
 use v_utils::{Percent, trades::Pair};
 
 use crate::config::{Settings, SettingsError};
 
 #[derive(Debug)]
 pub struct MainLine {
-	settings: Arc<Settings>,
+	settings: Rc<Settings>,
 
 	btcusdt_price: Option<f64>,
 	percent_longs: Option<Percent>,
@@ -19,7 +19,7 @@ pub struct MainLine {
 	binance_agent: Arc<Binance>,
 }
 impl MainLine {
-	pub fn try_new(settings: Arc<Settings>, bn: Arc<Binance>, lsr_update_freq: Duration) -> ExchangeResult<Self> {
+	pub fn try_new(settings: Rc<Settings>, bn: Arc<Binance>, lsr_update_freq: Duration) -> ExchangeResult<Self> {
 		let pairs: Vec<Pair> = vec![("BTC", "USDT").into()];
 		let instrument = Instrument::Perp;
 		let ws_connection = bn.ws_trades(pairs, instrument)?;
@@ -41,42 +41,50 @@ impl MainLine {
 	/// # Returns
 	/// if any of the data has been updated, returns `true`
 	pub async fn collect(&mut self) -> ExchangeResult<bool> {
-		let mut changed = false;
+		let handle_lsr = async {
+			let lsr_result = self
+				.binance_agent
+				.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
+				.await;
 
-		tokio::select! {
-			_ = self.lsr_interval.tick() => {
-				let lsr_result = self.binance_agent
-					.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
-					.await;
+			let percent_longs: Option<Percent> = match lsr_result {
+				Ok(percent_longs) => Some(*percent_longs[0]),
+				Err(e) => {
+					tracing::warn!("Failed to get LSR: {e}");
+					None
+				}
+			};
 
-				let percent_longs: Option<Percent> = match lsr_result {
-					Ok(percent_longs) => Some(*percent_longs[0]),
-					Err(e) => {
-						tracing::warn!("Failed to get LSR: {e}");
-						None
+			if self.percent_longs != percent_longs {
+				self.percent_longs = percent_longs;
+				true
+			} else {
+				false
+			}
+		};
+
+		let handle_trade = async {
+			match self.ws_connection.next().await {
+				Ok(trade) => {
+					let new_price = Some(trade.price);
+					if self.btcusdt_price != new_price {
+						self.btcusdt_price = new_price;
+						true
+					} else {
+						false
 					}
-				};
-
-				if self.percent_longs != percent_longs {
-					self.percent_longs = percent_longs;
-					changed = true;
+				}
+				Err(e) => {
+					tracing::warn!("Failed to get trade: {e}");
+					false
 				}
 			}
-			trade_result = self.ws_connection.next() => {
-				match trade_result {
-					Ok(trade) => {
-						let new_price = Some(trade.price);
-						if self.btcusdt_price != new_price {
-							self.btcusdt_price = new_price;
-							changed = true;
-						}
-					}
-					Err(e) => {
-						tracing::warn!("Failed to get trade: {e}");
-					}
-				}
-			}
-		}
+		};
+
+		let changed = tokio::select! {
+			_ = self.lsr_interval.tick() => handle_lsr.await,
+			changed = handle_trade => changed,
+		};
 
 		Ok(changed)
 	}

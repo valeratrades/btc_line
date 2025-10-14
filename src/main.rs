@@ -2,7 +2,7 @@ mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
-use std::{sync::Arc, time::Duration};
+use std::{rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Report;
@@ -33,7 +33,7 @@ struct NoArgs {}
 async fn main() {
 	v_utils::clientside!();
 	let cli = Cli::parse();
-	let settings = Arc::new(Settings::new(cli.config.0, Duration::from_secs(5)));
+	let settings = Settings::new(cli.config.0, Duration::from_secs(5));
 
 	match cli.command {
 		Commands::Start(_) => {
@@ -44,11 +44,12 @@ async fn main() {
 }
 
 //Q: should this return ExchangeResult, or actually just wrap over infinite retries?
-async fn start(settings: Arc<Settings>) -> ExchangeResult<()> {
-	let mut output = Output::new(Arc::clone(&settings));
+async fn start(settings: Settings) -> ExchangeResult<()> {
+	let settings = Rc::new(settings);
+	let mut output = Output::new(Rc::clone(&settings));
 	let bn = Arc::new(Binance::default());
 
-	let mut main_line = MainLine::try_new(Arc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
+	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
 	//let additional_line = AdditionalLine::new(settings, bn);
 
 	//dbg

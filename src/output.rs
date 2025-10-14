@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, sync::Arc};
+use std::{collections::HashMap, io::Write, os::unix::fs::OpenOptionsExt, rc::Rc, sync::Arc};
 
 use color_eyre::eyre::{self, Result, bail};
 use tracing::instrument;
@@ -17,11 +17,11 @@ define_str_enum! {
 
 #[derive(Debug, Default, Clone)]
 pub struct Output {
-	settings: Arc<Settings>,
+	settings: Rc<Settings>,
 	old_vals: HashMap<LineName, String>,
 }
 impl Output {
-	pub fn new(settings: Arc<Settings>) -> Self {
+	pub fn new(settings: Rc<Settings>) -> Self {
 		Self { settings, ..Default::default() }
 	}
 

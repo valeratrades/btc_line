@@ -13,6 +13,8 @@ use tracing::error;
 use v_exchanges::binance::Binance;
 use v_utils::io::ExpandedPath;
 
+use crate::config::Settings;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -34,17 +36,18 @@ struct NoArgs {}
 async fn main() {
 	utils::init_subscriber(None);
 	let cli = Cli::parse();
-	let config = match AppConfig::new(cli.config) {
+	let config = match AppConfig::new(&cli.config) {
 		Ok(cfg) => cfg,
 		Err(e) => {
 			error!("{:?}", e);
 			std::process::exit(1);
 		}
 	};
+	let settings = Settings::new(config, cli.config.0);
 
 	match cli.command {
 		Commands::Start(_) => {
-			let output = Arc::new(Mutex::new(Output::new(config.clone())));
+			let output = Output::new(Arc::clone(settings));
 
 			let main_line = Arc::new(Mutex::new(main_line::MainLine::default()));
 			let spy_line = Arc::new(Mutex::new(spy_line::SpyLine::default()));
@@ -52,8 +55,8 @@ async fn main() {
 			let exchange = Arc::new(Binance::default());
 
 			//TODO!!!: change to [].join() along with main loop. Spawns bad.
-			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), config.clone(), output.clone(), Arc::clone(&exchange)));
-			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), config.clone(), output.clone()));
+			let _ = tokio::spawn(main_line::MainLine::websocket(main_line.clone(), Arc::clone(settings), output.clone(), Arc::clone(&exchange)));
+			let _ = tokio::spawn(spy_line::SpyLine::websocket(spy_line.clone(), Arc::clone(settings), output.clone()));
 			let mut cycle = 0;
 			loop {
 				{

@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use config::{ConfigError, File};
 use serde::Deserialize;
 use v_utils::{io::ExpandedPath, macros::MyConfigPrimitives};
@@ -17,15 +19,28 @@ pub struct Spy {
 }
 
 impl AppConfig {
-	pub fn new(path: ExpandedPath) -> Result<Self, ConfigError> {
-		let builder = config::Config::builder().set_default("comparison_offset_h", 24)?.add_source(File::with_name(&path.to_string()));
+	pub fn new(path: &Path) -> Result<Self, ConfigError> {
+		let builder = config::Config::builder()
+			.set_default("comparison_offset_h", 24)?
+			.add_source(File::with_name(&path.display().to_string()));
 
-		let settings: config::Config = builder.build()?;
-		let settings: Self = settings.try_deserialize()?;
+		let conf: config::Config = builder.build()?;
+		let conf: Self = conf.try_deserialize()?;
 
-		if settings.comparison_offset_h > 24 {
+		if conf.comparison_offset_h > 24 {
 			return Err(ConfigError::Message("comparison limits above a day are not supported".into()));
 		}
-		Ok(settings)
+		Ok(conf)
+	}
+}
+
+#[derive(Deserialize, Clone, Debug, Default, derive_new::new)]
+pub struct Settings {
+	pub config: AppConfig,
+	config_path: PathBuf,
+}
+impl Settings {
+	pub async fn watch_config(&mut self, config: &mut AppConfig) {
+		todo!();
 	}
 }

@@ -2,6 +2,7 @@ use std::{rc::Rc, sync::Arc, time::Duration};
 
 use color_eyre::eyre::Result;
 use tokio::time::Interval;
+use tracing::instrument;
 use v_exchanges::{Exchange, ExchangeResult};
 use v_utils::NowThen;
 
@@ -15,12 +16,12 @@ pub struct AdditionalLine {
 	open_interest_change: Option<NowThen>,
 	btc_volume_change: Option<NowThen>,
 
-	exchange_client: Arc<Box<dyn Exchange>>,
+	exchange_client: Arc<dyn Exchange>,
 	update_interval: Interval,
 }
 
 impl AdditionalLine {
-	pub fn new(settings: Rc<Settings>, exchange_client: Arc<Box<dyn Exchange>>, update_freq: Duration) -> Self {
+	pub fn new(settings: Rc<Settings>, exchange_client: Arc<dyn Exchange>, update_freq: Duration) -> Self {
 		let update_interval = tokio::time::interval(update_freq);
 
 		Self {
@@ -36,12 +37,13 @@ impl AdditionalLine {
 
 	/// # Returns
 	/// if any of the data has been updated, returns `true`
+	#[instrument(skip_all)]
 	pub async fn collect(&mut self) -> ExchangeResult<bool> {
-		dbg!(&"here");
+		//DEPRECATE: nuke the commented-out `dbg`s here, - were useful when figuring out correct form of main loop, that wouldn't drop arms prematurely (this arm is usually the slower one)
 		self.update_interval.tick().await;
-		dbg!(&"now here");
-		let (oi_result, volume_result) = tokio::join!(self.get_open_interest_change(), self.get_btc_volume_change());
-		dbg!(&"got oi and vol");
+		//dbg!("after waiting for self.update_interval");
+		let (oi_result, vol_result) = tokio::join!(self.get_open_interest_change(), self.get_btc_volume_change());
+		//dbg!("got oi and vol: {oi_result:?}, {vol_result:?}");
 
 		let mut changed = false;
 		match oi_result {
@@ -54,7 +56,7 @@ impl AdditionalLine {
 				tracing::warn!("Failed to get open interest: {e}");
 			}
 		};
-		match volume_result {
+		match vol_result {
 			Ok(btc_volume_change) =>
 				if self.btc_volume_change.is_none_or(|v| v != btc_volume_change) {
 					self.btc_volume_change = Some(btc_volume_change);

@@ -6,7 +6,7 @@ use std::{cell::RefCell, pin::Pin, rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
-use futures_util::{FutureExt as _, StreamExt as _, stream::FuturesUnordered};
+use futures_util::{StreamExt as _, stream::FuturesUnordered};
 use output::Output;
 use v_exchanges::{ExchangeName, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
@@ -55,7 +55,7 @@ async fn start(settings: Settings) -> Result<()> {
 	binance_exchange.set_max_tries(3);
 
 	let main_line = Rc::new(RefCell::new(MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?));
-	let additional_line = Rc::new(RefCell::new(AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(15))));
+	let additional_line = Rc::new(RefCell::new(AdditionalLine::new(Rc::clone(&settings), Arc::from(binance_exchange), Duration::from_secs(15))));
 
 	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, v_exchanges::ExchangeResult<bool>)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();

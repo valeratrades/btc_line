@@ -2,10 +2,11 @@ mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
-use std::{rc::Rc, sync::Arc, time::Duration};
+use std::{cell::RefCell, pin::Pin, rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
+use futures_util::{FutureExt as _, StreamExt as _, stream::FuturesUnordered};
 use output::Output;
 use v_exchanges::{ExchangeName, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
@@ -53,23 +54,56 @@ async fn start(settings: Settings) -> Result<()> {
 	let mut binance_exchange = ExchangeName::Binance.init_client();
 	binance_exchange.set_max_tries(3);
 
-	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
-	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(15));
+	let main_line = Rc::new(RefCell::new(MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?));
+	let additional_line = Rc::new(RefCell::new(AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(15))));
 
-	loop {
-		tokio::select! {
-			result = main_line.collect() => {
-				let main_line_changed = result?;
-				if main_line_changed {
-					output.output(LineName::Main, main_line.display()?).await?;
-				}
-			},
-			result = additional_line.collect() => {
-				let additional_line_changed = result?;
-				if additional_line_changed {
-					output.output(LineName::Additional, additional_line.display()?).await?;
-				}
-			},
+	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, v_exchanges::ExchangeResult<bool>)>>>;
+	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();
+
+	{
+		let ml = Rc::clone(&main_line);
+		futures.push(Box::pin(async move {
+			let result = ml.borrow_mut().collect().await;
+			(LineName::Main, result)
+		}));
+	}
+	{
+		let al = Rc::clone(&additional_line);
+		futures.push(Box::pin(async move {
+			let result = al.borrow_mut().collect().await;
+			(LineName::Additional, result)
+		}));
+	}
+
+	while let Some((line_name, result)) = futures.next().await {
+		let changed = result?;
+		if changed {
+			let display_str = match line_name {
+				LineName::Main => main_line.borrow().display()?,
+				LineName::Additional => additional_line.borrow().display()?,
+				_ => unreachable!(),
+			};
+			output.output(line_name, display_str).await?;
+		}
+
+		match line_name {
+			LineName::Main => {
+				let ml = Rc::clone(&main_line);
+				futures.push(Box::pin(async move {
+					let result = ml.borrow_mut().collect().await;
+					(LineName::Main, result)
+				}));
+			}
+			LineName::Additional => {
+				let al = Rc::clone(&additional_line);
+				futures.push(Box::pin(async move {
+					let result = al.borrow_mut().collect().await;
+					(LineName::Additional, result)
+				}));
+			}
+			_ => unreachable!(),
 		}
 	}
+
+	Ok(())
 }

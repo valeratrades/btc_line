@@ -37,8 +37,11 @@ impl AdditionalLine {
 	/// # Returns
 	/// if any of the data has been updated, returns `true`
 	pub async fn collect(&mut self) -> ExchangeResult<bool> {
+		dbg!(&"here");
 		self.update_interval.tick().await;
+		dbg!(&"now here");
 		let (oi_result, volume_result) = tokio::join!(self.get_open_interest_change(), self.get_btc_volume_change());
+		dbg!(&"got oi and vol");
 
 		let mut changed = false;
 		match oi_result {

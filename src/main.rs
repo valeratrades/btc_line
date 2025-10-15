@@ -54,7 +54,7 @@ async fn start(settings: Settings) -> Result<()> {
 	binance_exchange.set_max_tries(3);
 
 	let mut main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
-	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(10)); //dbg: should be like 60s
+	let mut additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::new(binance_exchange), Duration::from_secs(15));
 
 	loop {
 		tokio::select! {

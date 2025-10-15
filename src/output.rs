@@ -37,7 +37,7 @@ impl Output {
 			if self.settings.config()?.outputs.eww {
 				tokio::process::Command::new("sh")
 					.arg("-c")
-					.arg(format!("eww update btc_line_{name}_str=\"{new_value_clone}\""))
+					.arg(dbg!(format!("eww update btc_line_{name}_str=\"{new_value_clone}\"")))
 					.status()
 					.await
 					.map_err(|e| eyre::eyre!(e))?;

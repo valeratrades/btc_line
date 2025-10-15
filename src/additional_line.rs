@@ -38,10 +38,9 @@ impl AdditionalLine {
 	/// if any of the data has been updated, returns `true`
 	pub async fn collect(&mut self) -> ExchangeResult<bool> {
 		self.update_interval.tick().await;
+		let (oi_result, volume_result) = tokio::join!(self.get_open_interest_change(), self.get_btc_volume_change());
 
 		let mut changed = false;
-
-		let oi_result = self.get_open_interest_change().await;
 		match oi_result {
 			Ok(open_interest_change) =>
 				if self.open_interest_change.is_none_or(|v| v != open_interest_change) {
@@ -52,8 +51,6 @@ impl AdditionalLine {
 				tracing::warn!("Failed to get open interest: {e}");
 			}
 		};
-
-		let volume_result = self.get_btc_volume_change().await;
 		match volume_result {
 			Ok(btc_volume_change) =>
 				if self.btc_volume_change.is_none_or(|v| v != btc_volume_change) {

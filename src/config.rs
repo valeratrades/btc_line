@@ -8,7 +8,7 @@ use config::{ConfigError, File};
 use serde::Deserialize;
 use v_utils::macros::MyConfigPrimitives;
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, MyConfigPrimitives)]
 pub struct AppConfig {
 	pub spy: Spy,
 	pub comparison_offset_h: usize,

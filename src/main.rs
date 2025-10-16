@@ -2,7 +2,7 @@ mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
-use std::{cell::RefCell, pin::Pin, rc::Rc, sync::Arc, time::Duration};
+use std::{pin::Pin, rc::Rc, sync::Arc, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
@@ -45,6 +45,11 @@ async fn main() {
 	}
 }
 
+enum LineInstance {
+	Main(MainLine),
+	Additional(AdditionalLine),
+}
+
 //Q: should this return ExchangeResult, or actually just wrap over infinite retries?
 async fn start(settings: Settings) -> Result<()> {
 	let settings = Rc::new(settings);
@@ -54,54 +59,49 @@ async fn start(settings: Settings) -> Result<()> {
 	let mut binance_exchange = ExchangeName::Binance.init_client();
 	binance_exchange.set_max_tries(3);
 
-	let main_line = Rc::new(RefCell::new(MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?));
-	let additional_line = Rc::new(RefCell::new(AdditionalLine::new(Rc::clone(&settings), Arc::from(binance_exchange), Duration::from_secs(15))));
+	let main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
+	let additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::from(binance_exchange), Duration::from_secs(15));
 
-	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, v_exchanges::ExchangeResult<bool>)>>>;
+	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, v_exchanges::ExchangeResult<bool>)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();
 
-	{
-		let ml = Rc::clone(&main_line);
-		futures.push(Box::pin(async move {
-			let result = ml.borrow_mut().collect().await;
-			(LineName::Main, result)
-		}));
-	}
-	{
-		let al = Rc::clone(&additional_line);
-		futures.push(Box::pin(async move {
-			let result = al.borrow_mut().collect().await;
-			(LineName::Additional, result)
-		}));
-	}
+	futures.push(Box::pin(async move {
+		let mut ml = main_line;
+		let result = ml.collect().await;
+		(LineName::Main, LineInstance::Main(ml), result)
+	}));
 
-	while let Some((line_name, result)) = futures.next().await {
+	futures.push(Box::pin(async move {
+		let mut al = additional_line;
+		let result = al.collect().await;
+		(LineName::Additional, LineInstance::Additional(al), result)
+	}));
+
+	while let Some((line_name, instance, result)) = futures.next().await {
 		let changed = result?;
 		if changed {
-			let display_str = match line_name {
-				LineName::Main => main_line.borrow().display()?,
-				LineName::Additional => additional_line.borrow().display()?,
-				_ => unreachable!(),
+			let display_str = match &instance {
+				LineInstance::Main(ml) => ml.display()?,
+				LineInstance::Additional(al) => al.display()?,
 			};
 			output.output(line_name, display_str).await?;
 		}
 
-		match line_name {
-			LineName::Main => {
-				let ml = Rc::clone(&main_line);
+		match instance {
+			LineInstance::Main(ml) => {
 				futures.push(Box::pin(async move {
-					let result = ml.borrow_mut().collect().await;
-					(LineName::Main, result)
+					let mut ml = ml;
+					let result = ml.collect().await;
+					(LineName::Main, LineInstance::Main(ml), result)
 				}));
 			}
-			LineName::Additional => {
-				let al = Rc::clone(&additional_line);
+			LineInstance::Additional(al) => {
 				futures.push(Box::pin(async move {
-					let result = al.borrow_mut().collect().await;
-					(LineName::Additional, result)
+					let mut al = al;
+					let result = al.collect().await;
+					(LineName::Additional, LineInstance::Additional(al), result)
 				}));
 			}
-			_ => unreachable!(),
 		}
 	}
 

@@ -74,6 +74,11 @@
               							cp -f ${readme} ./README.md
               						'';
 
+          env = {
+            RUST_BACKTRACE = 1;
+            RUST_LIB_BACKTRACE = 0;
+          };
+
           packages = [
             mold-wrapped
             openssl

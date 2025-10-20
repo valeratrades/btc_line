@@ -79,12 +79,12 @@ impl Output {
 
 					let mut found = false;
 					for line in &mut lines {
-						if let Some((line_name, _)) = line.split_once(": ") {
-							if line_name == name_str {
-								*line = line_to_write.clone();
-								found = true;
-								break;
-							}
+						if let Some((line_name, _)) = line.split_once(": ")
+							&& line_name == name_str
+						{
+							*line = line_to_write.clone();
+							found = true;
+							break;
 						}
 					}
 

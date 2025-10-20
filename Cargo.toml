@@ -1,7 +1,7 @@
 [package]
 name = "btc_line"
-version = "1.0.0"
-edition = "2021"
+version = "1.0.1"
+edition = "2024"
 authors = ["Valeriy Sakharov <valeratrades@gmail.com>"]
 description = "A Bitcoin price and market data line display tool"
 license = "BlueOak-1.0.0"

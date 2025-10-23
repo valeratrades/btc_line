@@ -8,7 +8,7 @@ use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
 use futures_util::{StreamExt as _, stream::FuturesUnordered};
 use output::Output;
-use v_exchanges::{ExchangeName, binance::Binance};
+use v_exchanges::{Exchange, binance::Binance};
 use v_utils::{io::ExpandedPath, utils::exit_on_error};
 
 use crate::{additional_line::AdditionalLine, config::Settings, main_line::MainLine, output::LineName};
@@ -54,13 +54,12 @@ enum LineInstance {
 async fn start(settings: Settings) -> Result<()> {
 	let settings = Rc::new(settings);
 	let mut output = Output::new(Rc::clone(&settings));
-	let bn = Arc::new(Binance::default());
+	let mut bn = Binance::default();
+	bn.set_max_tries(3);
+	let bn_arc = Arc::new(bn);
 
-	let mut binance_exchange = ExchangeName::Binance.init_client();
-	binance_exchange.set_max_tries(3);
-
-	let main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn), Duration::from_secs(15))?;
-	let additional_line = AdditionalLine::new(Rc::clone(&settings), Arc::from(binance_exchange), Duration::from_secs(15));
+	let main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn_arc), Duration::from_secs(15))?;
+	let additional_line = AdditionalLine::new(Rc::clone(&settings), bn_arc as Arc<dyn Exchange>, Duration::from_secs(15));
 
 	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, v_exchanges::ExchangeResult<bool>)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();

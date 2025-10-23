@@ -7,7 +7,7 @@ use v_utils::define_str_enum;
 use crate::config::Settings;
 
 define_str_enum! {
-	#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+	#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 	pub enum LineName {
 		Additional => "additional",
 		Main => "main",
@@ -15,7 +15,7 @@ define_str_enum! {
 	}
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone, Debug, Default)]
 pub struct Output {
 	settings: Rc<Settings>,
 	old_vals: HashMap<LineName, String>,

@@ -17,7 +17,7 @@ pub struct AppConfig {
 	pub outputs: Outputs,
 }
 
-#[derive(Clone, Debug, smart_default::SmartDefault, MyConfigPrimitives)]
+#[derive(Clone, Debug, MyConfigPrimitives, smart_default::SmartDefault)]
 pub struct Outputs {
 	pub eww: bool,
 	#[default(true)]
@@ -49,7 +49,7 @@ impl AppConfig {
 //TODO: define a `flags_conf` struct, that is `AppConfig`, constructed from flags only, and frozen in place, so we can run further config updates against it (as flags always win)
 //Q: or wait, can this be done natively with `config` crate, and the derive macro I have around this?
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct TimeCapsule<T> {
 	pub value: T,
 	pub init_t: SystemTime,
@@ -67,7 +67,7 @@ impl<T: Default> Default for TimeCapsule<T> {
 
 /// # General
 /// If config is updated, new values from there should overwrite settings cache
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub struct Settings {
 	config_path: PathBuf,
 	config: RefCell<TimeCapsule<AppConfig>>,

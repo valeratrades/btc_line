@@ -434,9 +434,9 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "config"
-version = "0.15.18"
+version = "0.15.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "180e549344080374f9b32ed41bf3b6b57885ff6a289367b3dbc10eea8acc1918"
+checksum = "b30fa8254caad766fc03cb0ccae691e14bf3bd72bfff27f72802ce729551b3d6"
 dependencies = [
  "async-trait",
  "convert_case 0.6.0",
@@ -2188,14 +2188,16 @@ dependencies = [
 
 [[package]]
 name = "ron"
-version = "0.8.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
+checksum = "fd490c5b18261893f14449cbd28cb9c0b637aebf161cd77900bfdedaff21ec32"
 dependencies = [
- "base64 0.21.7",
  "bitflags",
+ "once_cell",
  "serde",
  "serde_derive",
+ "typeid",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -3127,9 +3129,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "v_exchanges"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ea583069ea2034a6824bb19432ce31a78a4570feb325e3a57462682eae12d67"
+checksum = "d96c27f37b2b1d872f30ae7354eec226d7c6e7661ae97cc5a693439208b8847e"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -3152,9 +3154,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_adapters"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9364e1542b26f8fa7db10b956027c6dd930eadfe35ed571bc416c17853b696cc"
+checksum = "a16722b03fc8e22d8d9f36a1cfc764a0fab7641f369367db8d5f445b1ad6dc19"
 dependencies = [
  "derive-new",
  "derive_more",
@@ -3177,9 +3179,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_api_generics"
-version = "0.15.1"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee26570d11771c64e66a189693c3fadac2f1a2a5eb84ee764a689a25ce428df4"
+checksum = "28c7d857a52af15a61ba5ddfb8963ef0a55d9279ee9b0f6debaf6b20dc33949f"
 dependencies = [
  "bytes",
  "derive-new",
@@ -3201,9 +3203,9 @@ dependencies = [
 
 [[package]]
 name = "v_utils"
-version = "2.7.11"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68c802e022d1d3dfe7d3d6804065e51d10e3aaed22936d03638adb43d4649b4d"
+checksum = "97432c2e524fdfefae8a132e16fa6bcad6013b28273d6a478bf7f5a031861220"
 dependencies = [
  "const_format",
  "derive-new",

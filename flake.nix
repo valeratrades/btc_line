@@ -55,8 +55,9 @@
             pre-commit-check.shellHook +
             ''
               							mkdir -p ./.github/workflows
-              							rm -f ./.github/workflows/errors.yml; cp ${workflowContents.errors} ./.github/workflows/errors.yml
-              							rm -f ./.github/workflows/warnings.yml; cp ${workflowContents.warnings} ./.github/workflows/warnings.yml
+              							cp -f ${workflowContents.errors} ./.github/workflows/errors.yml
+              							cp -f ${workflowContents.warnings} ./.github/workflows/warnings.yml
+              							cp -f ${workflowContents.other} ./.github/workflows/other.yml
 
               							cp -f ${v-utils.files.licenses.blue_oak} ./LICENSE
 

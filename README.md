@@ -9,6 +9,11 @@
 
 ![Screenshot](./.readme_assets/screenshot.png)
 
+## Usage
+```sh
+btc_line start
+```
+
 
 
 <br>
@@ -30,3 +35,4 @@
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
 be licensed as above, without any additional terms or conditions.
 </sub>
+

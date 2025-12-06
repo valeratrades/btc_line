@@ -47,7 +47,8 @@ impl AppConfig {
 }
 
 //TODO: define a `flags_conf` struct, that is `AppConfig`, constructed from flags only, and frozen in place, so we can run further config updates against it (as flags always win)
-//Q: or wait, can this be done natively with `config` crate, and the derive macro I have around this?
+
+//TODO: see if can be rewritten using [notify](https://docs.rs/notify/latest/notify/) crate for file change detection. Orion recommended as superior to current approach.
 
 #[derive(Clone, Debug, Deserialize)]
 struct TimeCapsule<T> {

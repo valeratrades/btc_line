@@ -17,11 +17,16 @@ pub struct AppConfig {
 	pub outputs: Outputs,
 }
 
-#[derive(Clone, Debug, MyConfigPrimitives, smart_default::SmartDefault)]
+#[derive(Clone, Debug, MyConfigPrimitives)]
 pub struct Outputs {
 	pub eww: bool,
-	#[default(true)]
 	pub pipes: bool,
+}
+
+impl Default for Outputs {
+	fn default() -> Self {
+		Self { eww: false, pipes: true }
+	}
 }
 
 #[derive(Clone, Debug, Default, MyConfigPrimitives)]
@@ -47,8 +52,6 @@ impl AppConfig {
 }
 
 //TODO: define a `flags_conf` struct, that is `AppConfig`, constructed from flags only, and frozen in place, so we can run further config updates against it (as flags always win)
-
-//TODO: see if can be rewritten using [notify](https://docs.rs/notify/latest/notify/) crate for file change detection. Orion recommended as superior to current approach.
 
 #[derive(Clone, Debug, Deserialize)]
 struct TimeCapsule<T> {

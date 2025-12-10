@@ -15,14 +15,14 @@ define_str_enum! {
 	}
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Output {
 	settings: Rc<Settings>,
 	old_vals: HashMap<LineName, String>,
 }
 impl Output {
 	pub fn new(settings: Rc<Settings>) -> Self {
-		Self { settings, ..Default::default() }
+		Self { settings, old_vals: HashMap::new() }
 	}
 
 	#[instrument(skip_all, fields(?name, new_value))]

@@ -4,7 +4,7 @@ use color_eyre::eyre::{self, Result};
 use tracing::instrument;
 use v_utils::define_str_enum;
 
-use crate::config::Settings;
+use crate::config::LiveSettings;
 
 define_str_enum! {
 	#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -15,14 +15,14 @@ define_str_enum! {
 	}
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Output {
-	settings: Rc<Settings>,
+	settings: Rc<LiveSettings>,
 	old_vals: HashMap<LineName, String>,
 }
 impl Output {
-	pub fn new(settings: Rc<Settings>) -> Self {
-		Self { settings, ..Default::default() }
+	pub fn new(settings: Rc<LiveSettings>) -> Self {
+		Self { settings, old_vals: HashMap::new() }
 	}
 
 	#[instrument(skip_all, fields(?name, new_value))]
@@ -34,7 +34,7 @@ impl Output {
 
 		let new_value_clone = new_value.clone();
 		let eww_update_handler = async {
-			if self.settings.config()?.outputs.eww {
+			if self.settings.config().outputs.eww {
 				tokio::process::Command::new("sh")
 					.arg("-c")
 					.arg(format!("eww update btc_line_{name}_str=\"{new_value_clone}\""))
@@ -48,7 +48,7 @@ impl Output {
 		let file_update_handler = async {
 			let file_path = v_utils::xdg_state_file!(name.to_string());
 
-			if self.settings.config()?.outputs.pipes {
+			if self.settings.config().outputs.pipes {
 				tokio::fs::write(&file_path, format!("{new_value}\n")).await.map_err(|e| eyre::eyre!(e))?;
 
 				// Update timestamp file

@@ -261,12 +261,14 @@ dependencies = [
  "console-subscriber",
  "derive-new",
  "derive_more",
+ "futures",
  "futures-util",
  "jiff",
  "libc",
  "reqwest",
  "serde",
  "serde_json",
+ "smart-default",
  "thiserror",
  "tokio",
  "tokio-rustls",
@@ -2541,6 +2543,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
+name = "smart-default"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eb01866308440fc64d6c44d9e86c5cc17adfe33c4d6eed55da9145044d0ffc1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "socket2"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3133,9 +3146,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "v_exchanges"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "493c780355a5fb8eaf8cb0da70580de9d619a9e360560662a13cc2fa91ed1bf5"
+version = "0.16.4"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -3158,9 +3169,7 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_adapters"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b004f8691b388c5b483d863180e770ca34fbbf4253ea5e8320c7299b36d22b37"
+version = "0.16.4"
 dependencies = [
  "base64 0.22.1",
  "derive-new",
@@ -3185,9 +3194,7 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_api_generics"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73a1c4e2341f1e9678fa8a497fbdb371499545e911c35ae90a162d5b9d068b10"
+version = "0.18.4"
 dependencies = [
  "bytes",
  "derive-new",
@@ -3209,10 +3216,9 @@ dependencies = [
 
 [[package]]
 name = "v_utils"
-version = "2.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5093e97c2994f3596bb38920877f9dd3e74be77a20b0cfec33a66fcc6c4e59b"
+version = "2.15.0"
 dependencies = [
+ "config",
  "const_format",
  "derive-new",
  "derive_more",
@@ -3237,9 +3243,7 @@ dependencies = [
 
 [[package]]
 name = "v_utils_macros"
-version = "2.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78967e3309c83091684d212e1968212bac75d3e9b80965cc95c27424643f344d"
+version = "2.11.0"
 dependencies = [
  "eyre",
  "heck",

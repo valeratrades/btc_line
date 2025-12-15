@@ -9,17 +9,17 @@ use color_eyre::eyre::Result;
 use futures_util::{StreamExt as _, stream::FuturesUnordered};
 use output::Output;
 use v_exchanges::{Exchange, binance::Binance};
-use v_utils::{io::ExpandedPath, utils::exit_on_error};
+use v_utils::utils::exit_on_error;
 
-use crate::{additional_line::AdditionalLine, config::Settings, main_line::MainLine, output::LineName};
+use crate::{additional_line::AdditionalLine, config::LiveSettings, main_line::MainLine, output::LineName};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
 	#[command(subcommand)]
 	command: Commands,
-	#[arg(long, default_value = "~/.config/btc_line.toml")]
-	config: ExpandedPath,
+	#[clap(flatten)]
+	settings_flags: config::SettingsFlags,
 }
 
 #[derive(Subcommand)]
@@ -34,7 +34,13 @@ struct NoArgs {}
 async fn main() {
 	v_utils::clientside!();
 	let cli = Cli::parse();
-	let settings = Settings::new(cli.config.0, Duration::from_secs(5));
+	let settings = match LiveSettings::new(cli.settings_flags, Duration::from_secs(5)) {
+		Ok(s) => s,
+		Err(e) => {
+			eprintln!("Failed to initialize settings: {e}");
+			std::process::exit(1);
+		}
+	};
 
 	match cli.command {
 		Commands::Start(_) => {
@@ -51,7 +57,7 @@ enum LineInstance {
 }
 
 //Q: should this return ExchangeResult, or actually just wrap over infinite retries?
-async fn start(settings: Settings) -> Result<()> {
+async fn start(settings: LiveSettings) -> Result<()> {
 	let settings = Rc::new(settings);
 	let mut output = Output::new(Rc::clone(&settings));
 	let mut bn = Binance::default();
@@ -80,8 +86,8 @@ async fn start(settings: Settings) -> Result<()> {
 		let changed = result?;
 		if changed {
 			let display_str = match &instance {
-				LineInstance::Main(ml) => ml.display()?,
-				LineInstance::Additional(al) => al.display()?,
+				LineInstance::Main(ml) => ml.display(),
+				LineInstance::Additional(al) => al.display(),
 			};
 			output.output(line_name, display_str).await?;
 		}

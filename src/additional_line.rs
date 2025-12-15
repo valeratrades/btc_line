@@ -6,12 +6,12 @@ use tracing::instrument;
 use v_exchanges::{Exchange, ExchangeResult};
 use v_utils::NowThen;
 
-use crate::config::Settings;
+use crate::config::LiveSettings;
 
 //TODO!: implement tiny graphics
 #[derive(Debug)]
 pub struct AdditionalLine {
-	settings: Rc<Settings>,
+	settings: Rc<LiveSettings>,
 
 	open_interest_change: Option<NowThen>,
 	btc_volume_change: Option<NowThen>,
@@ -21,7 +21,7 @@ pub struct AdditionalLine {
 }
 
 impl AdditionalLine {
-	pub fn new(settings: Rc<Settings>, exchange_client: Arc<dyn Exchange>, update_freq: Duration) -> Self {
+	pub fn new(settings: Rc<LiveSettings>, exchange_client: Arc<dyn Exchange>, update_freq: Duration) -> Self {
 		let update_interval = tokio::time::interval(update_freq);
 
 		Self {
@@ -70,21 +70,21 @@ impl AdditionalLine {
 		Ok(changed)
 	}
 
-	pub fn display(&self) -> Result<String> {
+	pub fn display(&self) -> String {
 		let mut oi_str = self.open_interest_change.as_ref().map_or("None".to_string(), |v| v.to_string());
 		let mut v_str = self.btc_volume_change.as_ref().map_or("None".to_string(), |v| v.to_string());
 
-		if self.settings.config()?.label {
+		if self.settings.config().label {
 			oi_str = format!("OI:{oi_str}");
 			v_str = format!("V:{v_str}");
 		}
 		let s = format!("{oi_str} {v_str}");
-		Ok(s)
+		s
 	}
 
 	/// Compares two last periods of `comparison_offset_h` hours. Default is yesterday against the day before.
 	async fn get_btc_volume_change(&self) -> Result<NowThen> {
-		let base_interval = self.settings.config()?.comparison_offset_h * 12;
+		let base_interval = self.settings.config().comparison_offset_h * 12;
 
 		let mut klines = self.exchange_client.klines("BTC-USDT.P".into(), "5m".into(), (base_interval * 2).into()).await?;
 
@@ -99,7 +99,7 @@ impl AdditionalLine {
 
 	/// Compares btc OI today against 24h ago (changes based on `comparison_offset_h`)
 	async fn get_open_interest_change(&self) -> Result<NowThen> {
-		let n_intervals = self.settings.config()?.comparison_offset_h * 12 + 1;
+		let n_intervals = self.settings.config().comparison_offset_h * 12 + 1;
 
 		let oi = self.exchange_client.open_interest("BTC-USDT.P".into(), "5m".into(), n_intervals.into()).await?;
 

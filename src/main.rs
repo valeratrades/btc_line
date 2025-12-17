@@ -32,7 +32,7 @@ struct NoArgs {}
 
 #[tokio::main]
 async fn main() {
-	v_utils::clientside!();
+	v_utils::clientside!(".log");
 	let cli = Cli::parse();
 	let settings = match LiveSettings::new(cli.settings_flags, Duration::from_secs(5)) {
 		Ok(s) => s,

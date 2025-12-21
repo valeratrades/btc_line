@@ -8,7 +8,7 @@ use v_utils::NowThen;
 
 use crate::config::LiveSettings;
 
-//TODO!: implement tiny graphics
+//TODO!: implement tiny graphics (now actuaully doable, using snapshot_fonts lib)
 #[derive(Debug)]
 pub struct AdditionalLine {
 	settings: Rc<LiveSettings>,

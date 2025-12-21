@@ -32,7 +32,6 @@ async fn main() {
 		}
 	};
 
-	//TODO!!!!!!!!: specify set of errors on which we just wait 30s and retry
 	let eyre_result = start(settings).await;
 	exit_on_error(eyre_result);
 }

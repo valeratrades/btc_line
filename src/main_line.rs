@@ -89,22 +89,13 @@ impl MainLine {
 
 	fn handle_trade(&mut self, trade_result: Result<Trade, WsError>) -> bool {
 		match trade_result {
-			Ok(trade) => {
-				//HACK: for some reason, this endpoint returns some trades with `qty_asset: 0.0` and `price: 0.0`. Might be an error on side of `v_exchanges`
-				let new_price = match trade.qty_asset {
-					0.0 => {
-						tracing::warn!("received a weird 0-ed Trade from ws: {trade:?}\nCould this be fault of v_exchanges?");
-						None
-					}
-					_ => Some(trade.price),
-				};
-				if new_price.is_some() && self.btcusdt_price != new_price {
-					self.btcusdt_price = new_price;
+			Ok(trade) =>
+				if self.btcusdt_price != Some(trade.price) {
+					self.btcusdt_price = Some(trade.price);
 					true
 				} else {
 					false
-				}
-			}
+				},
 			Err(e) => {
 				tracing::warn!("Failed to get trade: {e}");
 				false

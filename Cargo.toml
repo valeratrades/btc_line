@@ -34,5 +34,5 @@ tracing-futures = "^0.2.5"
 tracing-log = "^0.2.0"
 tracing-subscriber = { version = "^0.3.22", features = ["fmt", "json", "registry", "env-filter"] }
 url = "^2.5.7"
-v_exchanges = { version = "=0.16.5" }
-v_utils = { version = "=2.15.3", features = ["io", "macros", "cli", "xdg"] }
+v_exchanges = { version = "=0.16.7" }
+v_utils = { version = "^2.15.3", features = ["io", "macros", "cli", "xdg"] }

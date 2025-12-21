@@ -3372,9 +3372,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "v_exchanges"
-version = "0.16.4"
+version = "0.16.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39a929b3f13f3b3fa4d8a2c2881841095428f2020b2ec0009ca95d81e99274c8"
+checksum = "ecacb865380b188f8b184ba032f3c057e615ed7291b253da2b3d18c76017f160"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -3397,9 +3397,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_adapters"
-version = "0.16.4"
+version = "0.16.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a6a072cb2777f74b06fbeec12f70c404e35d631465c36f04f9684c0afc98915"
+checksum = "a0712391a503ff4598fb0d5f4a505d56fbfd475d765943248503f7ed38570496"
 dependencies = [
  "base64 0.22.1",
  "derive-new",
@@ -3424,9 +3424,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_api_generics"
-version = "0.18.4"
+version = "0.18.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b035568f3fba3e778797d3e947f0b4701efff7d2a51aab32ab3c1e846bedb965"
+checksum = "24041a5acde4bd909b48e45bf1e8d2efff087d56e5745850e59b14abb50a442b"
 dependencies = [
  "bytes",
  "derive-new",

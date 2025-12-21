@@ -4,7 +4,7 @@ mod main_line;
 pub mod output;
 use std::{pin::Pin, rc::Rc, sync::Arc, time::Duration};
 
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
 use color_eyre::eyre::Result;
 use futures_util::{StreamExt as _, stream::FuturesUnordered};
 use output::Output;
@@ -16,19 +16,9 @@ use crate::{additional_line::AdditionalLine, config::LiveSettings, main_line::Ma
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-	#[command(subcommand)]
-	command: Commands,
 	#[clap(flatten)]
 	settings_flags: config::SettingsFlags,
 }
-
-#[derive(Subcommand)]
-enum Commands {
-	/// Start the program
-	Start(NoArgs),
-}
-#[derive(Args)]
-struct NoArgs {}
 
 #[tokio::main]
 async fn main() {
@@ -42,13 +32,9 @@ async fn main() {
 		}
 	};
 
-	match cli.command {
-		Commands::Start(_) => {
-			//TODO!!!!!!!!: specify set of errors on which we just wait 30s and retry
-			let eyre_result = start(settings).await;
-			exit_on_error(eyre_result);
-		}
-	}
+	//TODO!!!!!!!!: specify set of errors on which we just wait 30s and retry
+	let eyre_result = start(settings).await;
+	exit_on_error(eyre_result);
 }
 
 enum LineInstance {

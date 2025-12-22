@@ -96,7 +96,7 @@
       homeManagerModules."${pname}" = { config, lib, pkgs, ... }:
         let
           inherit (lib) mkEnableOption mkOption mkIf;
-          inherit (lib.types) package;
+          inherit (lib.types) package path;
           cfg = config."${pname}";
         in
         {
@@ -108,6 +108,16 @@
               default = self.packages.${pkgs.system}.default;
               description = "The package to use.";
             };
+
+            alpacaKey = mkOption {
+              type = path;
+              description = "Path to file containing Alpaca API key";
+            };
+
+            alpacaSecret = mkOption {
+              type = path;
+              description = "Path to file containing Alpaca API secret";
+            };
           };
 
           config = mkIf cfg.enable {
@@ -115,7 +125,7 @@
               Unit = {
                 Description = "btc_line";
                 After = [ "network.target" "sops-nix.service" ];
-                Wants = [ "sops-nix.service" ];
+                Requires = [ "sops-nix.service" ];
               };
 
               Install = {
@@ -124,7 +134,14 @@
 
               Service = {
                 Type = "simple";
-                ExecStart = "${cfg.package}/bin/${pname}";
+                LoadCredential = [
+                  "alpaca_key:${cfg.alpacaKey}"
+                  "alpaca_secret:${cfg.alpacaSecret}"
+                ];
+                ExecStartPre = "${pkgs.bash}/bin/bash -c 'while [ ! -f ${cfg.alpacaKey} ] || [ ! -f ${cfg.alpacaSecret} ]; do ${pkgs.coreutils}/bin/sleep 0.1; done'";
+                ExecStart = ''
+                  ${pkgs.bash}/bin/bash -c '${cfg.package}/bin/${pname} --spy-alpaca-key "$(${pkgs.coreutils}/bin/cat /run/user/1000/credentials/btc_line.service/alpaca_key)" --spy-alpaca-secret "$(${pkgs.coreutils}/bin/cat /run/user/1000/credentials/btc_line.service/alpaca_secret)"'
+                '';
                 Restart = "on-failure";
                 RestartSec = 5;
               };

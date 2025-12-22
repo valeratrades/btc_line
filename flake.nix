@@ -143,7 +143,7 @@
                   "alpaca_secret:${cfg.alpacaSecret}"
                 ];
                 ExecStartPre = "${pkgs.bash}/bin/bash -c 'while [ ! -f ${cfg.alpacaKey} ] || [ ! -f ${cfg.alpacaSecret} ]; do ${pkgs.coreutils}/bin/sleep 0.1; done'";
-                ExecStart = "/bin/sh -c 'ALPACA_API_KEY=\"$(cat %d/alpaca_key)\" ALPACA_API_SECRET=\"$(cat %d/alpaca_secret)\" ${cfg.package}/bin/${pname} --spy-alpaca-key \"$(cat %d/alpaca_key)\" --spy-alpaca-secret \"$(cat %d/alpaca_secret)\"'";
+                ExecStart = "/bin/sh -c 'ALPACA_API_KEY=\"$(cat %d/alpaca_key)\" ALPACA_API_SECRET=\"$(cat %d/alpaca_secret)\" ${cfg.package}/bin/${pname}'";
                 Restart = "on-failure";
                 RestartSec = 5;
               };

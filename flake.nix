@@ -135,6 +135,7 @@
               Service = {
                 Type = "simple";
                 Environment = [
+                  "PATH=/run/current-system/sw/bin"
                   "HOME=%h"
                   "XDG_STATE_HOME=%h/.local/state"
                   "ALPACA_API_KEY=placeholder"

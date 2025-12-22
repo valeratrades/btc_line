@@ -134,13 +134,9 @@
 
               Service = {
                 Type = "simple";
-                LoadCredential = [
-                  "alpaca_key:${cfg.alpacaKey}"
-                  "alpaca_secret:${cfg.alpacaSecret}"
-                ];
                 ExecStartPre = "${pkgs.bash}/bin/bash -c 'while [ ! -f ${cfg.alpacaKey} ] || [ ! -f ${cfg.alpacaSecret} ]; do ${pkgs.coreutils}/bin/sleep 0.1; done'";
                 ExecStart = ''
-                  ${pkgs.bash}/bin/bash -c '${cfg.package}/bin/${pname} --spy-alpaca-key "$(${pkgs.coreutils}/bin/cat /run/user/1000/credentials/btc_line.service/alpaca_key)" --spy-alpaca-secret "$(${pkgs.coreutils}/bin/cat /run/user/1000/credentials/btc_line.service/alpaca_secret)"'
+                  ${pkgs.bash}/bin/bash -c '${cfg.package}/bin/${pname} --spy-alpaca-key "$(${pkgs.coreutils}/bin/cat ${cfg.alpacaKey})" --spy-alpaca-secret "$(${pkgs.coreutils}/bin/cat ${cfg.alpacaSecret})"'
                 '';
                 Restart = "on-failure";
                 RestartSec = 5;

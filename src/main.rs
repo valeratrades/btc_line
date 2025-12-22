@@ -24,16 +24,53 @@ struct Cli {
 async fn main() {
 	v_utils::clientside!(".log");
 	let cli = Cli::parse();
-	let settings = match LiveSettings::new(cli.settings_flags, Duration::from_secs(5)) {
-		Ok(s) => s,
-		Err(e) => {
-			eprintln!("Failed to initialize settings: {e}");
-			std::process::exit(1);
-		}
-	};
+	let settings = init_settings_with_retry(cli.settings_flags).await;
 
 	let eyre_result = start(settings).await;
 	exit_on_error(eyre_result);
+}
+
+/// Extract env var name from error like "Environment variable 'FOO' not found"
+fn extract_missing_env_var(err: &str) -> Option<&str> {
+	let marker = "Environment variable '";
+	let start = err.find(marker)? + marker.len();
+	let rest = &err[start..];
+	let end = rest.find('\'')?;
+	Some(&rest[..end])
+}
+
+/// Initialize settings with exponential backoff retry for transient errors.
+/// Config errors (missing env vars) fail immediately with helpful suggestions.
+/// Transient errors retry with e^i delays: ~1s, ~2.7s, ~7.4s, ~20s, ...
+async fn init_settings_with_retry(flags: config::SettingsFlags) -> LiveSettings {
+	let mut attempt = 0u32;
+	loop {
+		match LiveSettings::new(flags.clone(), Duration::from_secs(5)) {
+			Ok(s) => return s,
+			Err(e) => {
+				let err_str = format!("{e:#}");
+
+				// Config errors: missing env vars - fail with guidance
+				if let Some(env_var) = extract_missing_env_var(&err_str) {
+					eprintln!("Missing environment variable: {env_var}\n");
+					eprintln!("Pass secrets as flags:");
+					eprintln!("  --spy-alpaca-key <KEY>");
+					eprintln!("  --spy-alpaca-secret <SECRET>");
+					eprintln!();
+					eprintln!("Example:");
+					eprintln!("  btc_line --spy-alpaca-key 'PKXXX...' --spy-alpaca-secret 'XXX...'");
+					std::process::exit(1);
+				}
+
+				// Transient errors: nix not ready, network issues - retry with backoff
+				let delay_secs = std::f64::consts::E.powi(attempt as i32);
+				let delay = Duration::from_secs_f64(delay_secs);
+				eprintln!("Transient error (attempt {}): {err_str}\nRetrying in {delay_secs:.1}s...", attempt + 1,);
+				tokio::time::sleep(delay).await;
+				attempt += 1;
+			}
+		}
+	}
 }
 
 enum LineInstance {

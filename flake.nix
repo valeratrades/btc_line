@@ -114,7 +114,8 @@
             systemd.user.services.btc_line = {
               Unit = {
                 Description = "btc_line";
-                After = [ "network.target" ];
+                After = [ "network.target" "sops-nix.service" ];
+                Wants = [ "sops-nix.service" ];
               };
 
               Install = {
@@ -125,6 +126,7 @@
                 Type = "simple";
                 ExecStart = "${cfg.package}/bin/${pname}";
                 Restart = "on-failure";
+                RestartSec = 5;
               };
             };
 

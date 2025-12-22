@@ -137,6 +137,8 @@
                 Environment = [
                   "HOME=%h"
                   "XDG_STATE_HOME=%h/.local/state"
+                  "ALPACA_API_KEY=placeholder"
+                  "ALPACA_API_SECRET=placeholder"
                 ];
                 ExecStartPre = "${pkgs.bash}/bin/bash -c 'while [ ! -f ${cfg.alpacaKey} ] || [ ! -f ${cfg.alpacaSecret} ]; do ${pkgs.coreutils}/bin/sleep 0.1; done'";
                 ExecStart = "${pkgs.bash}/bin/bash -c \"${cfg.package}/bin/${pname} --spy-alpaca-key \\\"\\$(${pkgs.coreutils}/bin/cat ${cfg.alpacaKey})\\\" --spy-alpaca-secret \\\"\\$(${pkgs.coreutils}/bin/cat ${cfg.alpacaSecret})\\\"\"";

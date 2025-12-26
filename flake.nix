@@ -4,7 +4,7 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
-    v-utils.url = "github:valeratrades/.github";
+    v-utils.url = "github:valeratrades/.github/v1.1.0";
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v-utils, ... }:
@@ -25,12 +25,13 @@
           pre-commit-check = pre-commit-hooks.lib.${system}.run (v-utils.files.preCommit { inherit pkgs; });
           stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.stdenv;
 
-          workflowContents = v-utils.ci {
-            inherit pkgs;
+          github = v-utils.github {
+            inherit pkgs pname;
             lastSupportedVersion = "nightly-2025-10-12";
             jobsErrors = [ "rust-tests" ];
             jobsWarnings = [ "rust-doc" "rust-clippy" "rust-machete" "rust-sorted" "rust-sorted-derives" "tokei" ];
             jobsOther = [ "loc-badge" ];
+            langs = [ "rs" ];
           };
           readme = v-utils.readme-fw { inherit pkgs pname; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; licenses = [{ name = "Blue Oak 1.0.0"; outPath = "LICENSE"; }]; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
         in
@@ -62,21 +63,17 @@
             inherit stdenv;
             shellHook =
               pre-commit-check.shellHook +
-              workflowContents.shellHook +
+              github.shellHook +
               ''
-                							cp -f ${v-utils.files.licenses.blue_oak} ./LICENSE
+                cp -f ${v-utils.files.licenses.blue_oak} ./LICENSE
 
-                							cargo -Zscript -q ${v-utils.hooks.appendCustom} ./.git/hooks/pre-commit
-                							cp -f ${(v-utils.hooks.treefmt) {inherit pkgs;}} ./.treefmt.toml
-                							cp -f ${(v-utils.hooks.preCommit) { inherit pkgs pname; }} ./.git/hooks/custom.sh
+                mkdir -p ./.cargo
+                cp -f ${(v-utils.files.treefmt) {inherit pkgs;}} ./.treefmt.toml
+                cp -f ${(v-utils.files.rust.rustfmt {inherit pkgs;})} ./rustfmt.toml
+                cp -f ${(v-utils.files.rust.config {inherit pkgs;})} ./.cargo/config.toml
 
-                							mkdir -p ./.cargo
-                							cp -f ${(v-utils.files.rust.rustfmt {inherit pkgs;})} ./rustfmt.toml
-                							cp -f ${(v-utils.files.rust.config {inherit pkgs;})} ./.cargo/config.toml
-                							cp -f ${(v-utils.files.gitignore { inherit pkgs; langs = ["rs"];})} ./.gitignore
-
-                							cp -f ${readme} ./README.md
-                						'';
+                cp -f ${readme} ./README.md
+              '';
 
             env = {
               RUST_BACKTRACE = 1;
@@ -88,7 +85,7 @@
               openssl
               pkg-config
               rust
-            ] ++ pre-commit-check.enabledPackages;
+            ] ++ pre-commit-check.enabledPackages ++ github.enabledPackages;
           };
         }
       )

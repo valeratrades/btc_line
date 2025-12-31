@@ -14,7 +14,7 @@ use v_utils::utils::exit_on_error;
 use crate::{additional_line::AdditionalLine, config::LiveSettings, main_line::MainLine, output::LineName};
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_HASH"), ")"), about, long_about = None)]
 struct Cli {
 	#[clap(flatten)]
 	settings_flags: config::SettingsFlags,

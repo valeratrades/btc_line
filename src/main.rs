@@ -2,7 +2,7 @@ mod additional_line;
 pub mod config;
 mod main_line;
 pub mod output;
-use std::{pin::Pin, rc::Rc, sync::Arc, time::Duration};
+use std::{pin::Pin, sync::Arc, time::Duration};
 
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -80,14 +80,14 @@ enum LineInstance {
 
 //Q: should this return ExchangeResult, or actually just wrap over infinite retries?
 async fn start(settings: LiveSettings) -> Result<()> {
-	let settings = Rc::new(settings);
-	let mut output = Output::new(Rc::clone(&settings));
+	let settings = Arc::new(settings);
+	let mut output = Output::new(Arc::clone(&settings));
 	let mut bn = Binance::default();
 	bn.set_max_tries(3);
 	let bn_arc = Arc::new(bn);
 
-	let main_line = MainLine::try_new(Rc::clone(&settings), Arc::clone(&bn_arc), Duration::from_secs(15))?;
-	let additional_line = AdditionalLine::new(Rc::clone(&settings), bn_arc as Arc<dyn Exchange>, Duration::from_secs(15));
+	let main_line = MainLine::try_new(Arc::clone(&settings), Arc::clone(&bn_arc), Duration::from_secs(15))?;
+	let additional_line = AdditionalLine::new(Arc::clone(&settings), bn_arc as Arc<dyn Exchange>, Duration::from_secs(15));
 
 	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, v_exchanges::ExchangeResult<bool>)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();

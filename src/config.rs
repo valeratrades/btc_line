@@ -1,5 +1,8 @@
 use clap::Parser;
-use v_utils::macros::{LiveSettings, MyConfigPrimitives, Settings, SettingsNested};
+use v_utils::{
+	macros::{LiveSettings, MyConfigPrimitives, Settings, SettingsNested},
+	trades::Timeframe,
+};
 
 #[derive(Clone, Debug, LiveSettings, MyConfigPrimitives, Settings)]
 pub struct AppConfig {
@@ -17,6 +20,8 @@ pub struct AppConfig {
 pub struct Outputs {
 	#[default = false]
 	pub eww: bool,
+	/// Rate limit for eww updates. If set, eww updates will be batched and sent at most once per this duration.
+	pub eww_rate_limit: Option<Timeframe>,
 	#[default = true]
 	pub pipes: bool,
 }

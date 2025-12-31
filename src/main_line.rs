@@ -1,4 +1,4 @@
-use std::{pin::pin, rc::Rc, sync::Arc, time::Duration};
+use std::{pin::pin, sync::Arc, time::Duration};
 
 use futures::future::{Either, select};
 use tokio::time::Interval;
@@ -9,7 +9,7 @@ use crate::config::LiveSettings;
 
 #[derive(Debug)]
 pub struct MainLine {
-	settings: Rc<LiveSettings>,
+	settings: Arc<LiveSettings>,
 
 	btcusdt_price: Option<f64>,
 	percent_longs: Option<Percent>,
@@ -20,7 +20,7 @@ pub struct MainLine {
 	binance_agent: Arc<Binance>,
 }
 impl MainLine {
-	pub fn try_new(settings: Rc<LiveSettings>, bn: Arc<Binance>, lsr_update_freq: Duration) -> ExchangeResult<Self> {
+	pub fn try_new(settings: Arc<LiveSettings>, bn: Arc<Binance>, lsr_update_freq: Duration) -> ExchangeResult<Self> {
 		let pairs: Vec<Pair> = vec![("BTC", "USDT").into()];
 		let instrument = Instrument::Perp;
 		let ws_connection = bn.ws_trades(pairs, instrument)?;

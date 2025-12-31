@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use color_eyre::eyre::Result;
 use tokio::time::Interval;
@@ -11,7 +11,7 @@ use crate::config::LiveSettings;
 //TODO!: implement tiny graphics (now actuaully doable, using snapshot_fonts lib)
 #[derive(Debug)]
 pub struct AdditionalLine {
-	settings: Rc<LiveSettings>,
+	settings: Arc<LiveSettings>,
 
 	open_interest_change: Option<NowThen>,
 	btc_volume_change: Option<NowThen>,
@@ -21,7 +21,7 @@ pub struct AdditionalLine {
 }
 
 impl AdditionalLine {
-	pub fn new(settings: Rc<LiveSettings>, exchange_client: Arc<dyn Exchange>, update_freq: Duration) -> Self {
+	pub fn new(settings: Arc<LiveSettings>, exchange_client: Arc<dyn Exchange>, update_freq: Duration) -> Self {
 		let update_interval = tokio::time::interval(update_freq);
 
 		Self {

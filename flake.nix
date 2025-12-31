@@ -4,7 +4,7 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
-    v-utils.url = "github:valeratrades/.github/v1.2.0";
+    v-utils.url = "github:valeratrades/.github?ref=v1.2";
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v-utils, ... }:
@@ -71,6 +71,7 @@
                 cp -f ${(v-utils.files.treefmt) {inherit pkgs;}} ./.treefmt.toml
                 cp -f ${(v-utils.files.rust.rustfmt {inherit pkgs;})} ./rustfmt.toml
                 cp -f ${(v-utils.files.rust.config {inherit pkgs;})} ./.cargo/config.toml
+                cp -f ${(v-utils.files.rust.build {inherit pkgs;})} ./build.rs && chmod +w ./build.rs
 
                 cp -f ${readme} ./README.md
               '';

@@ -3,7 +3,8 @@ label = false
 
 [outputs]
 eww = true
-pipes = true 
+eww_rate_limit = "1s"  # optional: rate limit eww updates (e.g., "500ms", "1s", "5s")
+pipes = true
 
 [spy]
 alpaca_key = "PKTJYTJNKYSBHAZYT3CO"

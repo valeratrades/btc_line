@@ -15,24 +15,24 @@ color-eyre = "^0.6.5"
 config = "^0.15.19"
 console-subscriber = "^0.5.0"
 derive-new = "0.7.0"
-derive_more = { version = "2.1.0", features = ["from", "from_str", "display"] }
+derive_more = { version = "2.1.1", features = ["from", "from_str", "display"] }
 futures = "0.3.31"
 futures-util = "^0.3.31"
 jiff = "0.2"
 libc = "^0.2"
-reqwest = { version = "^0.12.26", features = ["json"] }
+reqwest = { version = "^0.13.1", features = ["json"] }
 serde = { version = "^1.0.228", features = ["derive"] }
-serde_json = "^1.0.145"
+serde_json = "^1.0.148"
 smart-default = "0.7.1"
 thiserror = "2.0.17"
 tokio = { version = "^1.48.0", features = ["full"] }
 tokio-rustls = "^0.26.4"
 tokio-tungstenite = { version = "^0.28.0", features = ["native-tls"] }
-tracing = "^0.1.43"
+tracing = "^0.1.44"
 tracing-error = "^0.2.1"
 tracing-futures = "^0.2.5"
 tracing-log = "^0.2.0"
 tracing-subscriber = { version = "^0.3.22", features = ["fmt", "json", "registry", "env-filter"] }
 url = "^2.5.7"
 v_exchanges = { version = "=0.16.7" }
-v_utils = { version = "^2.15.3", features = ["io", "macros", "cli", "xdg"] }
+v_utils = { version = "^2.15.14", features = ["io", "macros", "cli", "xdg", "trades"] }

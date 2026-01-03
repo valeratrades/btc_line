@@ -4,7 +4,7 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
-    v-utils.url = "github:valeratrades/.github?ref=v1.3";
+    v-utils.url = "github:valeratrades/.github";
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v-utils, ... }:
@@ -28,13 +28,11 @@
           github = v-utils.github {
             inherit pkgs pname;
             lastSupportedVersion = "nightly-2025-10-12";
-            jobsErrors = [ "rust-tests" ];
-            jobsWarnings = [ "rust-doc" "rust-clippy" "rust-machete" "rust-sorted" "rust-sorted-derives" "tokei" ];
-            jobsOther = [ "loc-badge" ];
             langs = [ "rs" ];
+            jobs.default = true;
           };
           rs = v-utils.rs { inherit pkgs; };
-          readme = v-utils.readme-fw { inherit pkgs pname; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; licenses = [{ name = "Blue Oak 1.0.0"; outPath = "LICENSE"; }]; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
+          readme = v-utils.readme-fw { inherit pkgs pname; defaults = true; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
         in
         {
           packages =
@@ -46,7 +44,7 @@
               };
             in
             {
-              default = rustPlatform.buildRustPackage rec {
+              default = rustPlatform.buildRustPackage {
                 inherit pname;
                 version = manifest.version;
 
@@ -66,12 +64,10 @@
               pre-commit-check.shellHook +
               github.shellHook +
               rs.shellHook +
+              readme.shellHook +
               ''
-                cp -f ${v-utils.files.licenses.blue_oak} ./LICENSE
                 cp -f ${(v-utils.files.treefmt) {inherit pkgs;}} ./.treefmt.toml
-                cp -f ${readme} ./README.md
               '';
-
             env = {
               RUST_BACKTRACE = 1;
               RUST_LIB_BACKTRACE = 0;

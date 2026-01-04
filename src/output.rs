@@ -55,7 +55,7 @@ impl Output {
 		let file_update_handler = async move {
 			let file_path = v_utils::xdg_state_file!(name.to_string());
 
-			if settings.config().outputs.pipes {
+			if settings.config().unwrap().outputs.pipes {
 				tokio::fs::write(&file_path, format!("{new_value_for_file}\n")).await.map_err(|e| eyre::eyre!(e))?;
 
 				// Update timestamp file
@@ -98,7 +98,7 @@ impl Output {
 	}
 
 	async fn handle_eww_update(&self, name: LineName, new_value: String) -> Result<()> {
-		let config = self.settings.config();
+		let config = self.settings.config().unwrap();
 		if !config.outputs.eww {
 			return Ok(());
 		}

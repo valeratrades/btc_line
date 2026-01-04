@@ -78,7 +78,6 @@ enum LineInstance {
 	Additional(AdditionalLine),
 }
 
-//Q: should this return ExchangeResult, or actually just wrap over infinite retries?
 async fn start(settings: LiveSettings) -> Result<()> {
 	let settings = Arc::new(settings);
 	let mut output = Output::new(Arc::clone(&settings));

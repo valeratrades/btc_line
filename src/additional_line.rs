@@ -46,26 +46,29 @@ impl AdditionalLine {
 		//dbg!("got oi and vol: {oi_result:?}, {vol_result:?}");
 
 		let mut changed = false;
-		match oi_result {
-			Ok(open_interest_change) =>
-				if self.open_interest_change.is_none_or(|v| v != open_interest_change) {
-					self.open_interest_change = Some(open_interest_change);
-					changed = true;
-				},
+		let new_oi = match oi_result {
+			Ok(v) => Some(v),
 			Err(e) => {
 				tracing::warn!("Failed to get open interest: {e}");
+				None
 			}
 		};
-		match vol_result {
-			Ok(btc_volume_change) =>
-				if self.btc_volume_change.is_none_or(|v| v != btc_volume_change) {
-					self.btc_volume_change = Some(btc_volume_change);
-					changed = true;
-				},
+		if self.open_interest_change != new_oi {
+			self.open_interest_change = new_oi;
+			changed = true;
+		}
+
+		let new_vol = match vol_result {
+			Ok(v) => Some(v),
 			Err(e) => {
 				tracing::warn!("Failed to get BTC volume: {e}");
+				None
 			}
 		};
+		if self.btc_volume_change != new_vol {
+			self.btc_volume_change = new_vol;
+			changed = true;
+		}
 
 		Ok(changed)
 	}

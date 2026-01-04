@@ -108,20 +108,19 @@ impl MainLine {
 			.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global)
 			.await;
 
-		match lsr_result {
-			Ok(percent_longs) => {
-				let new_value = *percent_longs[0];
-				if self.percent_longs != Some(new_value) {
-					self.percent_longs = Some(new_value);
-					true
-				} else {
-					false
-				}
-			}
+		let percent_longs: Option<Percent> = match lsr_result {
+			Ok(percent_longs) => Some(*percent_longs[0]),
 			Err(e) => {
 				tracing::warn!("Failed to get LSR: {e}");
-				false
+				None
 			}
+		};
+
+		if self.percent_longs != percent_longs {
+			self.percent_longs = percent_longs;
+			true
+		} else {
+			false
 		}
 	}
 

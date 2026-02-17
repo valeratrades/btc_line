@@ -31,7 +31,7 @@
             langs = [ "rs" ];
             jobs.default = true;
           };
-          rs = v-utils.rs { inherit pkgs; };
+          rs = v-utils.rs { inherit pkgs rust; };
           readme = v-utils.readme-fw { inherit pkgs pname; defaults = true; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
         in
         {

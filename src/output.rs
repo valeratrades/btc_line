@@ -19,13 +19,6 @@ define_str_enum! {
 	}
 }
 
-#[derive(Debug, Default)]
-struct EwwRateLimitState {
-	last_sent: Option<Instant>,
-	pending_value: Option<String>,
-	flush_scheduled: bool,
-}
-
 #[derive(Clone, Debug)]
 pub struct Output {
 	settings: Arc<LiveSettings>,
@@ -198,4 +191,11 @@ impl Output {
 			.map_err(|e| eyre::eyre!(e))?;
 		Ok(())
 	}
+}
+
+#[derive(Debug, Default)]
+struct EwwRateLimitState {
+	last_sent: Option<Instant>,
+	pending_value: Option<String>,
+	flush_scheduled: bool,
 }

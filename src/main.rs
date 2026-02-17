@@ -1,7 +1,16 @@
-mod additional_line;
 pub mod config;
-mod main_line;
 pub mod output;
+#[tokio::main]
+async fn main() {
+	v_utils::clientside!(".log");
+	let cli = Cli::parse();
+	let settings = init_settings_with_retry(cli.settings_flags).await;
+
+	let eyre_result = start(settings).await;
+	exit_on_error(eyre_result);
+}
+mod additional_line;
+mod main_line;
 use std::{pin::Pin, sync::Arc, time::Duration};
 
 use clap::Parser;
@@ -18,16 +27,6 @@ use crate::{additional_line::AdditionalLine, config::LiveSettings, main_line::Ma
 struct Cli {
 	#[clap(flatten)]
 	settings_flags: config::SettingsFlags,
-}
-
-#[tokio::main]
-async fn main() {
-	v_utils::clientside!(".log");
-	let cli = Cli::parse();
-	let settings = init_settings_with_retry(cli.settings_flags).await;
-
-	let eyre_result = start(settings).await;
-	exit_on_error(eyre_result);
 }
 
 /// Extract env var name from error like "Environment variable 'FOO' not found"

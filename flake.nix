@@ -4,10 +4,10 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
-    v-utils.url = "github:valeratrades/.github";
+    v_flakes.url = "github:valeratrades/v_flakes?ref=v1.5";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v-utils, ... }:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v_flakes }:
     let
       manifest = (nixpkgs.lib.importTOML ./Cargo.toml).package;
       pname = manifest.name;
@@ -22,17 +22,17 @@
           rust = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
             extensions = [ "rust-src" "rust-analyzer" "rust-docs" "rustc-codegen-cranelift-preview" ];
           });
-          pre-commit-check = pre-commit-hooks.lib.${system}.run (v-utils.files.preCommit { inherit pkgs; });
+          pre-commit-check = pre-commit-hooks.lib.${system}.run (v_flakes.files.preCommit { inherit pkgs; });
           stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.stdenv;
 
-          github = v-utils.github {
-            inherit pkgs pname;
+          rs = v_flakes.rs { inherit pkgs rust; };
+          github = v_flakes.github {
+            inherit pkgs pname rs;
+            enable = true;
             lastSupportedVersion = "nightly-2025-10-12";
-            langs = [ "rs" ];
             jobs.default = true;
           };
-          rs = v-utils.rs { inherit pkgs rust; };
-          readme = v-utils.readme-fw { inherit pkgs pname; defaults = true; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
+          readme = v_flakes.readme-fw { inherit pkgs pname; defaults = true; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
         in
         {
           packages =
@@ -66,7 +66,7 @@
               rs.shellHook +
               readme.shellHook +
               ''
-                cp -f ${(v-utils.files.treefmt) {inherit pkgs;}} ./.treefmt.toml
+                cp -f ${(v_flakes.files.treefmt) {inherit pkgs;}} ./.treefmt.toml
               '';
             env = {
               RUST_BACKTRACE = 1;

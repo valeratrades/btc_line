@@ -133,7 +133,6 @@ impl Output {
 				} else if should_schedule_flush {
 					// Schedule a flush task
 					let states = self.eww_rate_limit_states.clone();
-					let duration = duration;
 					tokio::spawn(async move {
 						tokio::time::sleep(duration).await;
 						Self::flush_pending_eww_update(name, states, duration).await;

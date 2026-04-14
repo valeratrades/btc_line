@@ -131,6 +131,5 @@ async fn start(settings: LiveSettings) -> Result<()> {
 			}
 		}
 	}
-
-	Ok(())
+	unreachable!();
 }

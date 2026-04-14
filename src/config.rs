@@ -4,6 +4,12 @@ use v_utils::{
 	trades::Timeframe,
 };
 
+/// CLI struct with SettingsFlags for clap integration
+#[derive(Debug, Parser)]
+pub struct Cli {
+	#[clap(flatten)]
+	pub settings_flags: SettingsFlags,
+}
 #[derive(Clone, Debug, LiveSettings, MyConfigPrimitives, Settings)]
 pub struct AppConfig {
 	#[settings(flatten)]
@@ -30,11 +36,4 @@ pub struct Outputs {
 pub struct Spy {
 	pub alpaca_key: String,
 	pub alpaca_secret: String,
-}
-
-/// CLI struct with SettingsFlags for clap integration
-#[derive(Debug, Parser)]
-pub struct Cli {
-	#[clap(flatten)]
-	pub settings_flags: SettingsFlags,
 }

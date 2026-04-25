@@ -82,12 +82,8 @@ enum LineInstance {
 async fn start(settings: LiveSettings) -> Result<()> {
 	let settings = Arc::new(settings);
 	let mut output = Output::new(Arc::clone(&settings));
-	let mut bn = Binance::default();
-	bn.set_max_tries(3);
-	let bn_arc = Arc::new(bn);
-
-	let main_line = MainLine::try_new(Arc::clone(&settings), Arc::clone(&bn_arc), Duration::from_secs(15))?;
-	let additional_line = AdditionalLine::new(Arc::clone(&settings), bn_arc as Arc<dyn Exchange>, Duration::from_secs(15));
+	let main_line = MainLine::try_new(Arc::clone(&settings), Binance::default(), Duration::from_secs(15)).await?;
+	let additional_line = AdditionalLine::new(Arc::clone(&settings), Arc::new(Binance::default()) as Arc<dyn Exchange>, Duration::from_secs(15));
 
 	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, v_exchanges::ExchangeResult<bool>)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();

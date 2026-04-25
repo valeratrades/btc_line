@@ -12,7 +12,12 @@ use output::Output;
 use v_exchanges::{Exchange, binance::Binance};
 use v_utils::utils::exit_on_error;
 
-use crate::{additional_line::AdditionalLine, config::LiveSettings, main_line::MainLine, output::LineName};
+use crate::{
+	additional_line::AdditionalLine,
+	config::LiveSettings,
+	main_line::MainLine,
+	output::{FlushFut, LineName},
+};
 
 #[derive(Parser)]
 #[command(author, version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_HASH"), ")"), about, long_about = None)]
@@ -100,32 +105,54 @@ async fn start(settings: LiveSettings) -> Result<()> {
 		(LineName::Additional, LineInstance::Additional(al), result)
 	}));
 
-	while let Some((line_name, instance, result)) = futures.next().await {
-		let changed = result?;
-		if changed {
-			let display_str = match &instance {
-				LineInstance::Main(ml) => ml.display(),
-				LineInstance::Additional(al) => al.display(),
-			};
-			output.output(line_name, display_str).await?;
-		}
+	// Single slot for the deferred eww-rate-limit flush future. We drive it inline (no
+	// `tokio::spawn`); the inner `flush_scheduled` flag guarantees at most one is ever in flight,
+	// so a single slot is sufficient. Per the requested rule, if a previous flush hasn't finished
+	// we drop the new one — the still-running flush will pick up any newly-stashed `pending_value`.
+	let mut pending_flush: Option<FlushFut> = None;
 
-		match instance {
-			LineInstance::Main(ml) => {
-				futures.push(Box::pin(async move {
-					let mut ml = ml;
-					let result = ml.collect().await;
-					(LineName::Main, LineInstance::Main(ml), result)
-				}));
+	//LOOP: main loop
+	loop {
+		tokio::select! {
+			Some((line_name, instance, result)) = futures.next() => {
+				let changed = result?;
+				if changed {
+					let display_str = match &instance {
+						LineInstance::Main(ml) => ml.display(),
+						LineInstance::Additional(al) => al.display(),
+					};
+					if let Some(flush_fut) = output.output(line_name, display_str).await?
+						&& pending_flush.is_none()
+					{
+						pending_flush = Some(flush_fut);
+					}
+				}
+
+				match instance {
+					LineInstance::Main(ml) => {
+						futures.push(Box::pin(async move {
+							let mut ml = ml;
+							let result = ml.collect().await;
+							(LineName::Main, LineInstance::Main(ml), result)
+						}));
+					}
+					LineInstance::Additional(al) => {
+						futures.push(Box::pin(async move {
+							let mut al = al;
+							let result = al.collect().await;
+							(LineName::Additional, LineInstance::Additional(al), result)
+						}));
+					}
+				}
 			}
-			LineInstance::Additional(al) => {
-				futures.push(Box::pin(async move {
-					let mut al = al;
-					let result = al.collect().await;
-					(LineName::Additional, LineInstance::Additional(al), result)
-				}));
+			() = async {
+				match pending_flush.as_mut() {
+					Some(f) => f.as_mut().await,
+					None => std::future::pending().await,
+				}
+			} => {
+				pending_flush = None;
 			}
 		}
 	}
-	unreachable!();
 }

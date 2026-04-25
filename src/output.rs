@@ -1,5 +1,6 @@
 use std::{
 	collections::HashMap,
+	pin::Pin,
 	sync::{Arc, Mutex},
 	time::Instant,
 };
@@ -9,6 +10,9 @@ use tracing::instrument;
 use v_utils::define_str_enum;
 
 use crate::config::LiveSettings;
+
+/// Deferred flush of a rate-limited eww update. Driven by the caller (no `tokio::spawn`).
+pub type FlushFut = Pin<Box<dyn std::future::Future<Output = ()> + Send + 'static>>;
 
 define_str_enum! {
 	#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -34,10 +38,12 @@ impl Output {
 		}
 	}
 
+	/// Returns an optional flush future. The caller must drive it to completion.
+	/// `None` means no deferred work is pending.
 	#[instrument(skip_all, fields(?name, new_value))]
-	pub async fn output(&mut self, name: LineName, new_value: String) -> Result<()> {
+	pub async fn output(&mut self, name: LineName, new_value: String) -> Result<Option<FlushFut>> {
 		if self.old_vals.get(&name).map(|v| v == &new_value).unwrap_or(false) {
-			return Ok(());
+			return Ok(None);
 		}
 		self.old_vals.insert(name, new_value.clone());
 
@@ -86,97 +92,104 @@ impl Output {
 			Ok::<_, eyre::Report>(())
 		};
 
-		tokio::try_join!(eww_update_handler, file_update_handler)?;
-		Ok(())
+		let (flush, ()) = tokio::try_join!(eww_update_handler, file_update_handler)?;
+		Ok(flush)
 	}
 
-	async fn handle_eww_update(&self, name: LineName, new_value: String) -> Result<()> {
+	async fn handle_eww_update(&self, name: LineName, new_value: String) -> Result<Option<FlushFut>> {
 		let config = self.settings.config().unwrap();
 		if !config.outputs.eww {
-			return Ok(());
+			return Ok(None);
 		}
 
-		match config.outputs.eww_rate_limit {
-			None => {
-				// No rate limiting, send immediately
-				Self::send_eww_update(name, &new_value).await?;
-			}
-			Some(rate_limit) => {
-				let duration = rate_limit.duration();
-				let now = Instant::now();
+		let Some(rate_limit) = config.outputs.eww_rate_limit else {
+			Self::send_eww_update(name, &new_value).await?;
+			return Ok(None);
+		};
 
-				let should_send_now;
-				let should_schedule_flush;
-				{
-					let mut states = self.eww_rate_limit_states.lock().unwrap();
-					let state = states.entry(name).or_default();
+		let duration = rate_limit.duration();
+		let now = Instant::now();
 
-					let can_send = state.last_sent.map(|last| now.duration_since(last) >= duration).unwrap_or(true);
+		let should_send_now;
+		let should_schedule_flush;
+		{
+			let mut states = self.eww_rate_limit_states.lock().unwrap();
+			let state = states.entry(name).or_default();
 
-					if can_send {
-						state.last_sent = Some(now);
-						state.pending_value = None;
-						should_send_now = true;
-						should_schedule_flush = false;
-					} else {
-						state.pending_value = Some(new_value.clone());
-						should_schedule_flush = !state.flush_scheduled;
-						if should_schedule_flush {
-							state.flush_scheduled = true;
-						}
-						should_send_now = false;
-					}
+			let can_send = state.last_sent.map(|last| now.duration_since(last) >= duration).unwrap_or(true);
+
+			if can_send {
+				state.last_sent = Some(now);
+				state.pending_value = None;
+				should_send_now = true;
+				should_schedule_flush = false;
+			} else {
+				state.pending_value = Some(new_value.clone());
+				should_schedule_flush = !state.flush_scheduled;
+				if should_schedule_flush {
+					state.flush_scheduled = true;
 				}
-
-				if should_send_now {
-					Self::send_eww_update(name, &new_value).await?;
-				} else if should_schedule_flush {
-					// Schedule a flush task
-					let states = self.eww_rate_limit_states.clone();
-					tokio::spawn(async move {
-						tokio::time::sleep(duration).await;
-						Self::flush_pending_eww_update(name, states, duration).await;
-					});
-				}
+				should_send_now = false;
 			}
 		}
 
-		Ok(())
+		if should_send_now {
+			Self::send_eww_update(name, &new_value).await?;
+			return Ok(None);
+		}
+
+		if should_schedule_flush {
+			let states = self.eww_rate_limit_states.clone();
+			return Ok(Some(Box::pin(Self::flush_pending_eww_update(name, states, duration))));
+		}
+
+		Ok(None)
 	}
 
+	/// Drains pending eww updates for `name`, respecting the rate limit. Loops until `pending_value`
+	/// is empty after a send, only then clears `flush_scheduled`. Holding the flag for the full
+	/// drain (rather than clearing it before send) means concurrent `output()` calls during a send
+	/// just stash their value in `pending_value` and we pick it up on the next loop iteration —
+	/// no chance of orphaned pending values.
 	async fn flush_pending_eww_update(name: LineName, states: Arc<Mutex<HashMap<LineName, EwwRateLimitState>>>, rate_limit_duration: std::time::Duration) {
 		loop {
-			let now = Instant::now();
-			let (value_to_send, should_wait) = {
+			let wait = {
+				let states = states.lock().unwrap();
+				let state = states.get(&name).expect("flush_scheduled implies entry exists");
+				let now = Instant::now();
+				state
+					.last_sent
+					.and_then(|last| {
+						let elapsed = now.duration_since(last);
+						(elapsed < rate_limit_duration).then(|| rate_limit_duration - elapsed)
+					})
+					.unwrap_or(std::time::Duration::ZERO)
+			};
+			if !wait.is_zero() {
+				tokio::time::sleep(wait).await;
+			}
+
+			let value_to_send = {
 				let mut states = states.lock().unwrap();
 				let state = states.entry(name).or_default();
-
-				let can_send = state.last_sent.map(|last| now.duration_since(last) >= rate_limit_duration).unwrap_or(true);
-
-				if can_send {
-					if let Some(value) = state.pending_value.take() {
-						state.last_sent = Some(now);
-						state.flush_scheduled = false;
-						(Some(value), false)
-					} else {
-						state.flush_scheduled = false;
-						(None, false)
+				match state.pending_value.take() {
+					Some(v) => {
+						state.last_sent = Some(Instant::now());
+						Some(v)
 					}
-				} else {
-					// Need to wait more
-					(None, true)
+					None => {
+						state.flush_scheduled = false;
+						None
+					}
 				}
 			};
 
-			if let Some(value) = value_to_send {
-				if let Err(e) = Self::send_eww_update(name, &value).await {
-					tracing::error!("Failed to send eww update: {e}");
-				}
-				break;
-			} else if should_wait {
-				tokio::time::sleep(rate_limit_duration).await;
-			} else {
-				break;
+			match value_to_send {
+				Some(v) =>
+					if let Err(e) = Self::send_eww_update(name, &v).await {
+						tracing::error!("Failed to send eww update: {e}");
+					},
+				None => break,
 			}
 		}
 	}

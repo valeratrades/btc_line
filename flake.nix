@@ -114,7 +114,7 @@
               Unit = {
                 Description = "btc_line";
                 After = [ "network.target" "sops-nix.service" ];
-                Requires = [ "sops-nix.service" ];
+                Wants = [ "sops-nix.service" ];
               };
 
               Install = {

@@ -1,7 +1,10 @@
 use std::{
-	collections::HashMap,
+	collections::{HashMap, VecDeque},
 	pin::Pin,
-	sync::{Arc, Mutex},
+	sync::{
+		Arc, Mutex,
+		atomic::{AtomicUsize, Ordering},
+	},
 	time::Instant,
 };
 
@@ -28,6 +31,9 @@ pub struct Output {
 	settings: Arc<LiveSettings>,
 	old_vals: HashMap<LineName, String>,
 	eww_rate_limit_states: Arc<Mutex<HashMap<LineName, EwwRateLimitState>>>,
+	/// Total values queued-but-unflushed across all lines. Bounds memory under bursts (backpressure):
+	/// `output()` errors out if a push would exceed `outputs.max_flushes`. Drained values decrement it.
+	total_queued: Arc<AtomicUsize>,
 }
 impl Output {
 	pub fn new(settings: Arc<LiveSettings>) -> Self {
@@ -35,6 +41,7 @@ impl Output {
 			settings,
 			old_vals: HashMap::new(),
 			eww_rate_limit_states: Arc::new(Mutex::new(HashMap::new())),
+			total_queued: Arc::new(AtomicUsize::new(0)),
 		}
 	}
 
@@ -108,6 +115,8 @@ impl Output {
 		};
 
 		let duration = rate_limit.duration();
+		let buffer = config.outputs.buffer;
+		let max_flushes = config.outputs.max_flushes;
 		let now = Instant::now();
 
 		let should_send_now;
@@ -120,11 +129,25 @@ impl Output {
 
 			if can_send {
 				state.last_sent = Some(now);
-				state.pending_value = None;
+				// Sending now supersedes whatever was queued — discard the stale backlog and account for it.
+				self.total_queued.fetch_sub(state.pending.len(), Ordering::Relaxed);
+				state.pending.clear();
 				should_send_now = true;
 				should_schedule_flush = false;
 			} else {
-				state.pending_value = Some(new_value.clone());
+				// Backpressure: refuse to let the global queue grow past `max_flushes`. Tainted (we can't
+				// keep up) — error out rather than silently dropping or unbounded buffering.
+				let prior = self.total_queued.fetch_add(1, Ordering::Relaxed);
+				if prior >= max_flushes {
+					self.total_queued.fetch_sub(1, Ordering::Relaxed);
+					return Err(eyre::eyre!("output flush backpressure: {prior} queued >= max_flushes={max_flushes}"));
+				}
+				state.pending.push_back(new_value.clone());
+				// Per-line buffer: keep only the `buffer` most recent values, drop oldest.
+				while state.pending.len() > buffer {
+					state.pending.pop_front();
+					self.total_queued.fetch_sub(1, Ordering::Relaxed);
+				}
 				should_schedule_flush = !state.flush_scheduled;
 				if should_schedule_flush {
 					state.flush_scheduled = true;
@@ -140,18 +163,18 @@ impl Output {
 
 		if should_schedule_flush {
 			let states = self.eww_rate_limit_states.clone();
-			return Ok(Some(Box::pin(Self::flush_pending_eww_update(name, states, duration))));
+			let total_queued = self.total_queued.clone();
+			return Ok(Some(Box::pin(Self::flush_pending_eww_update(name, states, total_queued, duration))));
 		}
 
 		Ok(None)
 	}
 
-	/// Drains pending eww updates for `name`, respecting the rate limit. Loops until `pending_value`
-	/// is empty after a send, only then clears `flush_scheduled`. Holding the flag for the full
-	/// drain (rather than clearing it before send) means concurrent `output()` calls during a send
-	/// just stash their value in `pending_value` and we pick it up on the next loop iteration —
-	/// no chance of orphaned pending values.
-	async fn flush_pending_eww_update(name: LineName, states: Arc<Mutex<HashMap<LineName, EwwRateLimitState>>>, rate_limit_duration: std::time::Duration) {
+	/// Drains pending eww updates for `name` in FIFO order, respecting the rate limit. Loops until the
+	/// `pending` queue is empty after a send, only then clears `flush_scheduled`. Holding the flag for
+	/// the full drain (rather than clearing it before send) means concurrent `output()` calls during a
+	/// send just append to `pending` and we pick them up on the next loop iteration — no orphaned values.
+	async fn flush_pending_eww_update(name: LineName, states: Arc<Mutex<HashMap<LineName, EwwRateLimitState>>>, total_queued: Arc<AtomicUsize>, rate_limit_duration: std::time::Duration) {
 		loop {
 			let wait = {
 				let states = states.lock().unwrap();
@@ -172,8 +195,9 @@ impl Output {
 			let value_to_send = {
 				let mut states = states.lock().unwrap();
 				let state = states.entry(name).or_default();
-				match state.pending_value.take() {
+				match state.pending.pop_front() {
 					Some(v) => {
+						total_queued.fetch_sub(1, Ordering::Relaxed);
 						state.last_sent = Some(Instant::now());
 						Some(v)
 					}
@@ -208,6 +232,7 @@ impl Output {
 #[derive(Debug, Default)]
 struct EwwRateLimitState {
 	last_sent: Option<Instant>,
-	pending_value: Option<String>,
+	/// FIFO of not-yet-pushed values, oldest at front. Bounded to `outputs.buffer` per line.
+	pending: VecDeque<String>,
 	flush_scheduled: bool,
 }

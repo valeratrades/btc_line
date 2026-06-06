@@ -1,23 +1,16 @@
-mod additional_line;
-pub mod config;
-mod main_line;
-pub mod output;
-
 use std::{pin::Pin, sync::Arc, time::Duration};
 
+use btc_line::{
+	additional_line::AdditionalLine,
+	config::{self, LiveSettings},
+	main_line::MainLine,
+	output::{FlushFut, LineName, Output},
+};
 use clap::Parser;
 use color_eyre::eyre::Result;
 use futures_util::{StreamExt as _, stream::FuturesUnordered};
-use output::Output;
 use v_exchanges::{Exchange, binance::Binance};
 use v_utils::utils::exit_on_error;
-
-use crate::{
-	additional_line::AdditionalLine,
-	config::LiveSettings,
-	main_line::MainLine,
-	output::{FlushFut, LineName},
-};
 
 #[derive(Parser)]
 #[command(author, version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_HASH"), ")"), about, long_about = None)]
@@ -62,7 +55,7 @@ async fn start(settings: LiveSettings) -> Result<()> {
 	}));
 
 	// Single slot for the deferred eww-rate-limit flush future. We drive it inline (no `tokio::spawn`); the inner `flush_scheduled` flag guarantees at most one is ever in flight, so a single slot is sufficient.
-	// If a previous flush hasn't finished we drop the new one — the still-running flush will pick up any newly-stashed `pending_value`.
+	// If a previous flush hasn't finished we drop the new one — the still-running flush will pick up any newly-queued `pending` values.
 	let mut pending_flush: Option<FlushFut> = None;
 
 	//LOOP: main loop

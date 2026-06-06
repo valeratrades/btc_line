@@ -81,7 +81,7 @@ impl MainLine {
 
 		enum Event {
 			Tick,
-			Trade(Result<BatchTrades, WsError>),
+			Trade(Result<Vec<BatchTrades>, WsError>),
 		}
 
 		let event = {
@@ -121,10 +121,16 @@ impl MainLine {
 		}
 	}
 
-	fn handle_trade(&mut self, trade_result: Result<BatchTrades, WsError>) -> bool {
+	fn handle_trade(&mut self, trade_result: Result<Vec<BatchTrades>, WsError>) -> bool {
 		match trade_result {
-			Ok(batch) => {
-				let price = batch.last_price().as_f64();
+			Ok(batches) => {
+				// One drained `next()` can carry many batches (one per pair). We subscribe a single pair,
+				// so in practice there's at most one, but take the last regardless — the freshest price is
+				// the last trade of the last batch. Intermediate trades within the burst are irrelevant to a
+				// status line that only ever shows the current price.
+				let Some(price) = batches.last().map(|b| b.last_price().as_f64()) else {
+					return false; // empty drain (e.g. all zero-skip trades): nothing changed
+				};
 				if self.btcusdt_price != Some(price) {
 					self.btcusdt_price = Some(price);
 					true

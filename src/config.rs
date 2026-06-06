@@ -22,7 +22,7 @@ pub struct AppConfig {
 	pub outputs: Outputs,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, SettingsNested, smart_default::SmartDefault)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, SettingsNested, smart_default::SmartDefault)]
 pub struct Outputs {
 	#[default = false]
 	pub eww: bool,
@@ -30,6 +30,14 @@ pub struct Outputs {
 	pub eww_rate_limit: Option<Timeframe>,
 	#[default = true]
 	pub pipes: bool,
+	/// Per-line cap on how many not-yet-pushed values we remember. When a burst arrives faster than we
+	/// can flush, only the `buffer` most recent values are kept; older ones are dropped.
+	#[default = 16]
+	pub buffer: usize,
+	/// Backpressure: hard cap on the total number of queued-but-unflushed values across all lines. If a
+	/// new value would exceed this, we error out rather than let the queue grow unbounded.
+	#[default = 256]
+	pub max_flushes: usize,
 }
 
 #[derive(Clone, Debug, Default, MyConfigPrimitives, SettingsNested)]

@@ -32,7 +32,8 @@ pub struct Output {
 	old_vals: HashMap<LineName, String>,
 	eww_rate_limit_states: Arc<Mutex<HashMap<LineName, EwwRateLimitState>>>,
 	/// Total values queued-but-unflushed across all lines. Bounds memory under bursts (backpressure):
-	/// `output()` errors out if a push would exceed `outputs.max_flushes`. Drained values decrement it.
+	/// `output()` sheds (drops) a new value rather than queue it past `outputs.max_flushes`. Drained
+	/// values decrement it.
 	total_queued: Arc<AtomicUsize>,
 }
 impl Output {
@@ -135,12 +136,16 @@ impl Output {
 				should_send_now = true;
 				should_schedule_flush = false;
 			} else {
-				// Backpressure: refuse to let the global queue grow past `max_flushes`. Tainted (we can't
-				// keep up) — error out rather than silently dropping or unbounded buffering.
+				// Backpressure: never let the global queue grow past `max_flushes`. When we're at the cap we
+				// can't keep up, so shed load by simply not admitting this value — the in-flight flush keeps
+				// draining the existing backlog, and the per-line `buffer` already bounds each line's history.
+				// We drop the freshest rather than disturb the queue being flushed; under sustained overload
+				// the line goes briefly stale, then catches up once the drain frees slots. Never kill the app.
 				let prior = self.total_queued.fetch_add(1, Ordering::Relaxed);
 				if prior >= max_flushes {
 					self.total_queued.fetch_sub(1, Ordering::Relaxed);
-					return Err(eyre::eyre!("output flush backpressure: {prior} queued >= max_flushes={max_flushes}"));
+					tracing::warn!(name = %name, prior, max_flushes, "output flush backpressure: dropping update, queue full");
+					return Ok(None);
 				}
 				state.pending.push_back(new_value.clone());
 				// Per-line buffer: keep only the `buffer` most recent values, drop oldest.
@@ -219,9 +224,11 @@ impl Output {
 	}
 
 	async fn send_eww_update(name: LineName, value: &str) -> Result<()> {
-		tokio::process::Command::new("sh")
-			.arg("-c")
-			.arg(format!("eww update btc_line_{name}_str=\"{value}\""))
+		// No shell: pass `var=value` as a single literal arg so values with quotes/`$`/backticks can't
+		// break the command or inject. `eww` parses `name=value` itself.
+		tokio::process::Command::new("eww")
+			.arg("update")
+			.arg(format!("btc_line_{name}_str={value}"))
 			.status()
 			.await
 			.map_err(|e| eyre::eyre!(e))?;

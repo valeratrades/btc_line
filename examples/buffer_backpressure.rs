@@ -7,7 +7,7 @@
 //!   2. backpressure errors once total queued hits `max_flushes`.
 //!
 //! Run: `cargo r --example buffer_backpressure`
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use btc_line::{
 	config::{Cli, LiveSettings},
@@ -51,7 +51,7 @@ alpaca_secret = "y"
 	.unwrap();
 
 	let cli = Cli::parse_from(["x", "--config", cfg.to_str().unwrap()]);
-	let settings = std::sync::Arc::new(LiveSettings::new(cli.settings_flags, Duration::from_secs(60)).unwrap());
+	let settings = Arc::new(LiveSettings::new(cli.settings_flags, Duration::from_secs(60)).unwrap());
 	let mut output = Output::new(settings);
 
 	// First call sends immediately (consumes the 1h window). Returns no flush future.
@@ -71,17 +71,19 @@ alpaca_secret = "y"
 	assert!(got_flush, "at least one queued value should have scheduled a flush future");
 	println!("OK: buffer path — 5 distinct queued values accepted, oldest dropped beyond buffer=3");
 
-	// Backpressure: max_flushes=5. Main currently holds 3 (capped by buffer). Queue another line to
-	// push the GLOBAL counter toward 5, then over. Use Additional + Spy with distinct values.
-	// Main=3 already. Add 2 to Additional -> total 5 (== max). The next push must error.
+	// Backpressure: max_flushes=5. Main currently holds 3 (capped by buffer). Push another line to
+	// reach the GLOBAL cap, then over. At the cap we SHED (drop the new value), not error — the app
+	// must survive overload. Main=3 already. a1 sends immediately, a2/a3 queue -> total 5 (==max).
 	output.output(LineName::Additional, "a1".into()).await.unwrap(); // sends immediately (new line, last_sent=None)
 	let _ = output.output(LineName::Additional, "a2".into()).await.unwrap(); // queues -> total 4
 	let _ = output.output(LineName::Additional, "a3".into()).await.unwrap(); // queues -> total 5 (==max)
 
-	let over = output.output(LineName::Additional, "a4".into()).await; // would be 6 -> backpressure
+	// Over the cap: must NOT error, must NOT schedule new work — just drop the value (Ok(None)).
+	let over = output.output(LineName::Additional, "a4".into()).await;
 	match over {
-		Err(e) => println!("OK: backpressure fired at max_flushes=5 -> {e}"),
-		Ok(_) => panic!("expected backpressure error once total queued >= max_flushes"),
+		Ok(None) => println!("OK: backpressure shed update at max_flushes=5 (Ok(None), app survives)"),
+		Ok(Some(_)) => panic!("over-cap push should not schedule a flush"),
+		Err(e) => panic!("backpressure must shed, not error: {e}"),
 	}
 
 	println!("\nALL CHECKS PASSED");

@@ -4,7 +4,7 @@
     rust-overlay.url = "github:oxalica/rust-overlay/adf987c76af8d17b8256d23631bcf203f81e1a63";
     flake-utils.url = "github:numtide/flake-utils/11707dc2f618dd54ca8739b309ec4fc024de578b";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix/3cfd774b0a530725a077e17354fbdb87ea1c4aad";
-    v_flakes.url = "github:valeratrades/v_flakes/1ca8693d97857937e29211f4491a77cdf74cb1e1";
+    v_flakes.url = "github:valeratrades/v_flakes/d4737aa179386874334cb1b2b21f174d11957fc4";
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v_flakes }:
@@ -33,7 +33,7 @@
             jobs.default = true;
           };
           readme = v_flakes.readme-fw { inherit pkgs pname; defaults = true; lastSupportedVersion = "nightly-1.92"; rootDir = ./.; badges = [ "msrv" "crates_io" "docs_rs" "loc" "ci" ]; };
-          combined = v_flakes.utils.combine [ rs github readme ];
+          combined = v_flakes.utils.combine { inherit rust; modules = [ rs github readme ]; };
         in
         {
           packages =

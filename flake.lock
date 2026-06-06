@@ -258,17 +258,17 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1778075834,
-        "narHash": "sha256-UEzlXbhJYr1T1ZmCvtJhhHO/phUDgkG1CHbmkCkosew=",
+        "lastModified": 1780707186,
+        "narHash": "sha256-toSS3oBXO3eajGUQXwaNsKimMJy2YALLXoOv7CPNb38=",
         "owner": "valeratrades",
         "repo": "v_flakes",
-        "rev": "1ca8693d97857937e29211f4491a77cdf74cb1e1",
+        "rev": "d4737aa179386874334cb1b2b21f174d11957fc4",
         "type": "github"
       },
       "original": {
         "owner": "valeratrades",
         "repo": "v_flakes",
-        "rev": "1ca8693d97857937e29211f4491a77cdf74cb1e1",
+        "rev": "d4737aa179386874334cb1b2b21f174d11957fc4",
         "type": "github"
       }
     }

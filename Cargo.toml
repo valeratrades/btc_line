@@ -35,11 +35,8 @@ tracing-futures = "=0.2.5"
 tracing-log = "=0.2.0"
 tracing-subscriber = { version = "=0.3.23", features = ["fmt", "json", "registry", "env-filter"] }
 url = "=2.5.8"
-v_exchanges = "=0.18.2"
+v_exchanges = "=0.18.3"
 v_utils = { version = "=2.15.48", features = ["io", "macros", "cli", "xdg", "trades"] }
 
-[patch.crates-io]
-v_exchanges = { path = "/home/v/s/v_exchanges/v_exchanges" }
-v_exchanges_methods = { path = "/home/v/s/v_exchanges/v_exchanges_methods" }
-v_exchanges_api_generics = { path = "/home/v/s/v_exchanges/v_exchanges_api_generics" }
-v_utils = { path = "/home/v/s/v_utils/v_utils" }
+[lints.rust]
+unused_features = "allow"

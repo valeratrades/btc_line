@@ -116,8 +116,8 @@ impl Output {
 		};
 
 		let duration = rate_limit.duration();
-		let buffer = config.outputs.buffer;
-		let max_flushes = config.outputs.max_flushes;
+		let buffer = config.outputs.buffer as usize;
+		let max_flushes = config.outputs.max_flushes as usize;
 		let now = Instant::now();
 
 		let should_send_now;

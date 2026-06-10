@@ -17,12 +17,27 @@ use v_utils::utils::exit_on_error;
 struct Cli {
 	#[clap(flatten)]
 	settings_flags: config::SettingsFlags,
+	#[command(subcommand)]
+	command: Option<Command>,
+}
+
+#[derive(clap::Subcommand)]
+enum Command {
+	/// Manage configuration: write defaults, diff against defaults, and generate the JSON Schema / Nix module for editor type-awareness.
+	Config {
+		#[command(subcommand)]
+		cmd: config::SettingsCommand,
+	},
 }
 
 #[tokio::main]
 async fn main() {
 	v_utils::clientside!();
 	let cli = Cli::parse();
+	if let Some(Command::Config { cmd }) = cli.command {
+		// Never returns — performs the requested config operation and exits.
+		config::AppConfig::handle_settings_command(cmd, cli.settings_flags);
+	}
 	let settings = exit_on_error(LiveSettings::new(cli.settings_flags, Duration::from_secs(5)));
 	let eyre_result = start(settings).await;
 	exit_on_error(eyre_result);
@@ -36,7 +51,7 @@ enum LineInstance {
 async fn start(settings: LiveSettings) -> Result<()> {
 	let settings = Arc::new(settings);
 	let mut output = Output::new(Arc::clone(&settings));
-	let main_line = MainLine::try_new(Arc::clone(&settings), Binance::default(), Duration::from_secs(15)).await?;
+	let main_line = MainLine::new(Arc::clone(&settings), Binance::default(), Duration::from_secs(15));
 	let additional_line = AdditionalLine::new(Arc::clone(&settings), Arc::new(Binance::default()) as Arc<dyn Exchange>, Duration::from_secs(15));
 
 	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, v_exchanges::ExchangeResult<bool>)>>>;

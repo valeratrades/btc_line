@@ -1,6 +1,6 @@
 use clap::Parser;
 use v_utils::{
-	macros::{LiveSettings, MyConfigPrimitives, Settings, SettingsNested},
+	macros::{ConfigJsonSchema, LiveSettings, MyConfigPrimitives, Settings, SettingsNested},
 	trades::Timeframe,
 };
 
@@ -10,19 +10,18 @@ pub struct Cli {
 	#[clap(flatten)]
 	pub settings_flags: SettingsFlags,
 }
-#[derive(Clone, Debug, LiveSettings, MyConfigPrimitives, Settings)]
+#[derive(Clone, ConfigJsonSchema, Debug, LiveSettings, MyConfigPrimitives, Settings)]
 pub struct AppConfig {
 	#[settings(flatten)]
 	pub spy: Spy,
-	#[settings(default = 24)]
-	pub comparison_offset_h: usize,
+	pub comparison_offset_h: usize = 24,
 	/// whether to label the displayed values, or (false ->) assume user's acquaintance with the layout
 	pub label: bool,
 	#[settings(flatten)]
 	pub outputs: Outputs,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, SettingsNested, smart_default::SmartDefault)]
+#[derive(Clone, Debug, serde::Deserialize, schemars::JsonSchema, serde::Serialize, SettingsNested, smart_default::SmartDefault)]
 #[serde(default)]
 pub struct Outputs {
 	#[default(false)]
@@ -41,7 +40,7 @@ pub struct Outputs {
 	pub max_flushes: u8,
 }
 
-#[derive(Clone, Debug, Default, MyConfigPrimitives, SettingsNested)]
+#[derive(Clone, Debug, Default, schemars::JsonSchema, MyConfigPrimitives, SettingsNested)]
 pub struct Spy {
 	pub alpaca_key: String,
 	pub alpaca_secret: String,

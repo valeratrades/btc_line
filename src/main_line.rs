@@ -21,13 +21,14 @@ pub struct MainLine {
 	reconnect_attempt: u32,
 }
 impl MainLine {
-	pub async fn try_new(settings: Arc<LiveSettings>, mut bn: Binance, lsr_update_freq: Duration) -> ExchangeResult<Self> {
-		let ws_connection = Self::create_ws_connection(&mut bn).await?;
+	// `ws_connection` starts `None` so a network outage at boot/resume is not fatal: the first `collect()`
+	// drives `ensure_ws_connection()`, which retries with backoff exactly like a mid-session reconnect.
+	pub fn new(settings: Arc<LiveSettings>, bn: Binance, lsr_update_freq: Duration) -> Self {
 		let lsr_interval = tokio::time::interval(lsr_update_freq);
 
-		Ok(Self {
+		Self {
 			settings,
-			ws_connection: Some(ws_connection),
+			ws_connection: None,
 			binance: bn,
 			lsr_interval,
 			reconnect_attempt: 0,
@@ -35,7 +36,7 @@ impl MainLine {
 			btcusdt_price: None,
 			percent_longs: None,
 			//,}}}
-		})
+		}
 	}
 
 	async fn create_ws_connection(bn: &mut Binance) -> ExchangeResult<Box<dyn ExchangeStream<Item = BatchTrades>>> {

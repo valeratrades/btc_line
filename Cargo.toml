@@ -22,6 +22,7 @@ jiff = "=0.2.28"
 libc = "=0.2.186"
 miette = { version = "=7.6.0", features = ["fancy", "syntect-highlighter", "serde"] }
 reqwest = { version = "=0.13.4", features = ["json"] }
+schemars = "=1.2.1"
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.150"
 smart-default = "=0.7.1"
@@ -36,7 +37,7 @@ tracing-log = "=0.2.0"
 tracing-subscriber = { version = "=0.3.23", features = ["fmt", "json", "registry", "env-filter"] }
 url = "=2.5.8"
 v_exchanges = "=0.18.3"
-v_utils = { version = "=2.15.48", features = ["io", "macros", "cli", "xdg", "trades"] }
+v_utils = { version = "=2.15.52", features = ["io", "macros", "cli", "xdg", "trades"] }
 
 [lints.rust]
 unused_features = "allow"

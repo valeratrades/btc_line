@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 [dependencies]
 clap = { version = "=4.6.1", features = ["derive"] }
 color-eyre = "=0.6.5"
-config = "=0.15.23"
+config = "=0.15.24"
 console-subscriber = "=0.5.0"
 derive-new = "=0.7.0"
 derive_more = { version = "=2.1.1", features = ["from", "from_str", "display"] }
@@ -36,7 +36,7 @@ tracing-futures = "=0.2.5"
 tracing-log = "=0.2.0"
 tracing-subscriber = { version = "=0.3.23", features = ["fmt", "json", "registry", "env-filter"] }
 url = "=2.5.8"
-v_exchanges = "=0.18.3"
+v_exchanges = "=0.18.4"
 v_utils = { version = "=2.15.52", features = ["io", "macros", "cli", "xdg", "trades"] }
 
 [lints.rust]

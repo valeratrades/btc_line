@@ -113,8 +113,8 @@
             systemd.user.services.btc_line = {
               Unit = {
                 Description = "btc_line";
-                After = [ "network.target" "sops-nix.service" ];
-                Wants = [ "sops-nix.service" ];
+                After = [ "network-online.target" "sops-nix.service" ];
+                Wants = [ "network-online.target" "sops-nix.service" ];
               };
 
               Install = {

@@ -4,7 +4,7 @@
     flake-utils.url = "github:numtide/flake-utils/11707dc2f618dd54ca8739b309ec4fc024de578b";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix/3cfd774b0a530725a077e17354fbdb87ea1c4aad";
     pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
-    v_flakes.url = "github:valeratrades/v_flakes/63bcc22e6f2e779043b3d1b7a3ca3c474b20ecd9";
+    v_flakes.url = "github:valeratrades/v_flakes/da579820c2a7d670a2eefc7a8d7bfa0d9444b0d7";
     v_flakes.inputs.nixpkgs.follows = "nixpkgs";
   };
 

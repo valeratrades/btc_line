@@ -1,13 +1,14 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/549bd84d6279f9852cae6225e372cc67fb91a4c1";
-    rust-overlay.url = "github:oxalica/rust-overlay/adf987c76af8d17b8256d23631bcf203f81e1a63";
     flake-utils.url = "github:numtide/flake-utils/11707dc2f618dd54ca8739b309ec4fc024de578b";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix/3cfd774b0a530725a077e17354fbdb87ea1c4aad";
-    v_flakes.url = "github:valeratrades/v_flakes/d4737aa179386874334cb1b2b21f174d11957fc4";
+    pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
+    v_flakes.url = "github:valeratrades/v_flakes/63bcc22e6f2e779043b3d1b7a3ca3c474b20ecd9";
+    v_flakes.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks, v_flakes }:
+  outputs = { self, nixpkgs, flake-utils, pre-commit-hooks, v_flakes }:
     let
       manifest = (nixpkgs.lib.importTOML ./Cargo.toml).package;
       pname = manifest.name;
@@ -15,13 +16,10 @@
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          overlays = builtins.trace "flake.nix sourced" [ (import rust-overlay) ];
           pkgs = import nixpkgs {
-            inherit system overlays;
+            inherit system;
           };
-          rust = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
-            extensions = [ "rust-src" "rust-analyzer" "rust-docs" "rustc-codegen-cranelift-preview" ];
-          });
+          rust = v_flakes.rs.default_nightly system;
           pre-commit-check = pre-commit-hooks.lib.${system}.run (v_flakes.files.preCommit { inherit pkgs; });
           stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.stdenv;
 

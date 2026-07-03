@@ -337,7 +337,7 @@ dependencies = [
 
 [[package]]
 name = "btc_line"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "clap",
  "color-eyre",
@@ -4148,9 +4148,9 @@ dependencies = [
 
 [[package]]
 name = "v_exchanges_methods"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4174551e1d49cc670d06d1c1441766f4718390532ded226c1758556582fd801e"
+checksum = "ed2c8a6c07e729623fd2ca0461f72f51893b4b0e33be4494603f50ba3ed16aff"
 dependencies = [
  "ahash",
  "arrayvec",

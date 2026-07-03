@@ -76,17 +76,33 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1777954456,
-        "narHash": "sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=",
+        "lastModified": 1782918843,
+        "narHash": "sha256-ETYnV9U7Sr+A45dohzZdfCZKOss4qrTkO+wgNZNvEc0=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "549bd84d6279f9852cae6225e372cc67fb91a4c1",
+        "rev": "e8273b29fe1390ec8d4603f2477357555291432e",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
         "repo": "nixpkgs",
-        "rev": "549bd84d6279f9852cae6225e372cc67fb91a4c1",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1767379071,
+        "narHash": "sha256-EgE0pxsrW9jp9YFMkHL9JMXxcqi/OoumPJYwf+Okucw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "fb7944c166a3b630f177938e478f0378e64ce108",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
         "type": "github"
       }
     },
@@ -94,9 +110,7 @@
       "inputs": {
         "flake-compat": "flake-compat",
         "gitignore": "gitignore",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
         "lastModified": 1776796298,
@@ -116,7 +130,6 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs",
         "pre-commit-hooks": "pre-commit-hooks",
         "v_flakes": "v_flakes"
       }
@@ -175,23 +188,21 @@
     "v_flakes": {
       "inputs": {
         "flake-utils": "flake-utils_2",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs_2",
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1783026825,
-        "narHash": "sha256-RzY8Vdf+Zur81NGa2G0Xg2vBP2XbONxrSJ1hLqQ57ac=",
+        "lastModified": 1783069037,
+        "narHash": "sha256-A2A1dj/u7ankq9G18vSM/7uBExtpDHA8Gv3AYJGY3C4=",
         "owner": "valeratrades",
         "repo": "v_flakes",
-        "rev": "da579820c2a7d670a2eefc7a8d7bfa0d9444b0d7",
+        "rev": "150f5576ff4f0cfb5e627234b25659d0d1b0b149",
         "type": "github"
       },
       "original": {
         "owner": "valeratrades",
+        "ref": "v1.6",
         "repo": "v_flakes",
-        "rev": "da579820c2a7d670a2eefc7a8d7bfa0d9444b0d7",
         "type": "github"
       }
     }

@@ -1,22 +1,19 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/549bd84d6279f9852cae6225e372cc67fb91a4c1";
     flake-utils.url = "github:numtide/flake-utils/11707dc2f618dd54ca8739b309ec4fc024de578b";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix/3cfd774b0a530725a077e17354fbdb87ea1c4aad";
-    pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
-    v_flakes.url = "github:valeratrades/v_flakes/da579820c2a7d670a2eefc7a8d7bfa0d9444b0d7";
-    v_flakes.inputs.nixpkgs.follows = "nixpkgs";
+    v_flakes.url = "github:valeratrades/v_flakes?ref=v1.6";
   };
 
-  outputs = { self, nixpkgs, flake-utils, pre-commit-hooks, v_flakes }:
+  outputs = { self, flake-utils, pre-commit-hooks, v_flakes }:
     let
-      manifest = (nixpkgs.lib.importTOML ./Cargo.toml).package;
+      manifest = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
       pname = manifest.name;
     in
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          pkgs = import nixpkgs {
+          pkgs = import v_flakes.default_nixpkgs {
             inherit system;
           };
           rust = v_flakes.rs.default_nightly system;

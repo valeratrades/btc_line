@@ -54,6 +54,8 @@
 
                 cargoLock.lockFile = ./Cargo.lock;
                 src = pkgs.lib.cleanSource ./.;
+                # sccache is a dev-machine convenience; absent in the build sandbox
+                postPatch = "sed -i '/rustc-wrapper/d' .cargo/config.toml";
               };
             };
 

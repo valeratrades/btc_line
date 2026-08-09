@@ -21,7 +21,7 @@ pub struct AppConfig {
 	pub outputs: Outputs,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, schemars::JsonSchema, serde::Serialize, SettingsNested, smart_default::SmartDefault)]
+#[derive(Clone, Debug, SettingsNested, serde::Deserialize, schemars::JsonSchema, serde::Serialize, smart_default::SmartDefault)]
 #[serde(default)]
 pub struct Outputs {
 	#[default(false)]
@@ -40,7 +40,7 @@ pub struct Outputs {
 	pub max_flushes: u8,
 }
 
-#[derive(Clone, Debug, Default, schemars::JsonSchema, MyConfigPrimitives, SettingsNested)]
+#[derive(Clone, Debug, Default, MyConfigPrimitives, SettingsNested, schemars::JsonSchema)]
 pub struct Spy {
 	pub alpaca_key: String,
 	pub alpaca_secret: String,

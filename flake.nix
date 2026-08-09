@@ -1,13 +1,12 @@
 {
   inputs = {
-    flake-utils.url = "github:numtide/flake-utils/11707dc2f618dd54ca8739b309ec4fc024de578b";
-    pre-commit-hooks.url = "github:cachix/git-hooks.nix/3cfd774b0a530725a077e17354fbdb87ea1c4aad";
     v_flakes.url = "github:valeratrades/v_flakes?ref=v1.6";
   };
 
-  outputs = { self, flake-utils, pre-commit-hooks, v_flakes }:
+  outputs = { self, v_flakes }:
     let
-      manifest = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
+      inherit (v_flakes) flake-utils pre-commit-hooks;
+      manifest = (v_flakes.nixpkgs.lib.importTOML ./Cargo.toml).package;
       pname = manifest.name;
     in
     flake-utils.lib.eachDefaultSystem
@@ -24,7 +23,7 @@
           github = v_flakes.github {
             inherit pkgs pname rs;
             enable = true;
-            lastSupportedVersion = "nightly-2025-10-12";
+            lastSupportedVersion = "nightly-${v_flakes.rs.nightly_version}";
             jobs.default = true;
             publishCachix = "valeratrades";
           };
@@ -49,11 +48,10 @@
                   openssl.dev
                 ];
                 nativeBuildInputs = with pkgs; [ pkg-config ];
+                RUSTC_WRAPPER = ""; # .cargo/config.toml sets sccache, absent in the sandbox
 
                 cargoLock.lockFile = ./Cargo.lock;
                 src = pkgs.lib.cleanSource ./.;
-                # sccache is a dev-machine convenience; absent in the build sandbox
-                postPatch = "sed -i '/rustc-wrapper/d' .cargo/config.toml";
               };
             };
 

@@ -8,12 +8,12 @@ use btc_line::{
 };
 use clap::Parser;
 use color_eyre::eyre::Result;
-use futures_util::{StreamExt as _, stream::FuturesUnordered};
-use v_exchanges::{
+use exchange_interactions::{
 	Exchange,
 	adapters::{binance::BinanceOption, generics::ws::WsConfig},
 	binance::Binance,
 };
+use futures_util::{StreamExt as _, stream::FuturesUnordered};
 use v_utils::utils::exit_on_error;
 
 #[derive(Parser)]
@@ -56,18 +56,18 @@ async fn start(settings: LiveSettings) -> Result<()> {
 	let settings = Arc::new(settings);
 	let mut output = Output::new(Arc::clone(&settings));
 	// A silent-but-open trade socket is caught in `message_timeout + response_timeout` (a probe Ping
-	// followed by a missing Pong → reconnect). Match the v_exchanges defaults explicitly to pin the
+	// followed by a missing Pong → reconnect). Match the exchange_interactions defaults explicitly to pin the
 	// price line's staleness ceiling here, where the exchange client is built.
 	let mut bn = Binance::default();
 	let mut ws_config = WsConfig::default();
 	ws_config.set_message_timeout(Duration::from_secs(32)).expect("non-zero literal");
 	ws_config.set_response_timout(Duration::from_secs(8)).expect("non-zero literal");
-	bn.update_default_option(BinanceOption::WsConfig(ws_config));
+	bn.update_default_option(BinanceOption::WsConfig(Box::new(ws_config)));
 
 	let main_line = MainLine::new(Arc::clone(&settings), bn, Duration::from_secs(15));
 	let additional_line = AdditionalLine::new(Arc::clone(&settings), Arc::new(Binance::default()) as Arc<dyn Exchange>, Duration::from_secs(15));
 
-	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, v_exchanges::ExchangeResult<bool>)>>>;
+	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, exchange_interactions::ExchangeResult<bool>)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();
 
 	futures.push(Box::pin(async move {

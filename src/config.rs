@@ -1,7 +1,7 @@
 use clap::Parser;
 use v_utils::{
+	Timeframe,
 	macros::{ConfigJsonSchema, LiveSettings, MyConfigPrimitives, Settings, SettingsNested},
-	trades::Timeframe,
 };
 
 /// CLI struct with SettingsFlags for clap integration
@@ -40,7 +40,7 @@ pub struct Outputs {
 	pub max_flushes: u8,
 }
 
-#[derive(Clone, Debug, Default, MyConfigPrimitives, SettingsNested, schemars::JsonSchema)]
+#[derive(Clone, ConfigJsonSchema, Debug, Default, MyConfigPrimitives, SettingsNested)]
 pub struct Spy {
 	pub alpaca_key: String,
 	pub alpaca_secret: String,

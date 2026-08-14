@@ -1,9 +1,10 @@
 use std::{pin::pin, sync::Arc, time::Duration};
 
+use exchange_interactions::{BatchTrades, Binance, ExchangeResult, ExchangeStream, Instrument, Price, Stream as _, adapters::generics::ws::WsError};
 use futures::future::{Either, select};
 use tokio::time::Interval;
-use v_exchanges::{BatchTrades, Binance, Exchange as _, ExchangeResult, ExchangeStream, Instrument, adapters::generics::ws::WsError};
-use v_utils::{Percent, trades::Pair};
+use trading_data_core::Pair;
+use v_utils::Percent;
 
 use crate::config::LiveSettings;
 
@@ -104,7 +105,10 @@ impl MainLine {
 	}
 
 	async fn handle_lsr(&mut self) -> bool {
-		let lsr_result = self.binance.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), v_exchanges::binance::data::LsrWho::Global).await;
+		let lsr_result = self
+			.binance
+			.lsr(("BTC", "USDT").into(), "5m".into(), 1.into(), exchange_interactions::binance::data::LsrWho::Global)
+			.await;
 
 		let percent_longs: Option<Percent> = match lsr_result {
 			Ok(percent_longs) => Some(*percent_longs[0]),
@@ -129,7 +133,12 @@ impl MainLine {
 				// so in practice there's at most one, but take the last regardless — the freshest price is
 				// the last trade of the last batch. Intermediate trades within the burst are irrelevant to a
 				// status line that only ever shows the current price.
-				let Some(price) = batches.last().map(|b| b.last_price().as_f64()) else {
+				// `BatchTrades` carries raw ticks; `prec().price` is the exponent they were scaled by, and
+				// `Price` is the type that owns that decode.
+				let Some(price) = batches.last().map(|b| {
+					let last = b.iter().last().expect("BatchTrades is never empty by construction");
+					Price::new(last.price, b.prec().price).as_f64()
+				}) else {
 					return false; // empty drain (e.g. all zero-skip trades): nothing changed
 				};
 				if self.btcusdt_price != Some(price) {

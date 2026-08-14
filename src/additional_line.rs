@@ -1,9 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
 use color_eyre::eyre::Result;
+use exchange_interactions::{Exchange, ExchangeResult};
 use tokio::time::Interval;
 use tracing::instrument;
-use v_exchanges::{Exchange, ExchangeResult};
 use v_utils::NowThen;
 
 use crate::config::LiveSettings;

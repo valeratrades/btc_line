@@ -16,6 +16,7 @@ config = "=0.15.25"
 console-subscriber = "=0.5.0"
 derive-new = "=0.7.0"
 derive_more = { version = "=2.1.1", features = ["from", "from_str", "display"] }
+exchange_interactions = { version = "=0.19.2", features = ["binance", "data"], default-features = false } # was `v_exchanges`; only the new name carries the post-2.16 v_utils
 futures = "=0.3.32"
 futures-util = "=0.3.32"
 jiff = "=0.2.31"
@@ -27,7 +28,7 @@ serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.150"
 smart-default = "=0.7.1"
 thiserror = "=2.0.18"
-tokio = { version = "=1.52.3", features = ["full"] }
+tokio = { version = "=1.53.1", features = ["full"] }
 tokio-rustls = "=0.26.4"
 tokio-tungstenite = { version = "=0.29.0", features = ["native-tls"] }
 tracing = "=0.1.44"
@@ -35,9 +36,9 @@ tracing-error = "=0.2.1"
 tracing-futures = "=0.2.5"
 tracing-log = "=0.2.0"
 tracing-subscriber = { version = "=0.3.23", features = ["fmt", "json", "registry", "env-filter"] }
+trading_data_core = "=0.3.0" # `Pair` et al., moved out of v_utils in 2.16; version matched to exchange_interactions' own
 url = "=2.5.8"
-v_exchanges = "=0.18.5"
-v_utils = { version = "=2.15.54", features = ["io", "macros", "cli", "xdg", "trades"] }
+v_utils = { version = "=2.18.0", features = ["io", "macros", "cli", "xdg"] }
 
 [lints.rust]
 unused_features = "allow"

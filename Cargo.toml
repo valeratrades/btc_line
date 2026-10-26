@@ -42,3 +42,6 @@ v_utils = { version = "=2.18.0", features = ["io", "macros", "cli", "xdg"] }
 
 [lints.rust]
 unused_features = "allow"
+
+[lints.cargo]
+non_kebab_case_bins = "allow"

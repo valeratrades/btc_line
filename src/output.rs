@@ -35,12 +35,10 @@ pub enum OutputError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, derive_more::Display)]
+#[display(rename_all = "lowercase")]
 pub enum LineName {
-	#[display("additional")]
 	Additional,
-	#[display("main")]
 	Main,
-	#[display("spy")]
 	Spy,
 }
 

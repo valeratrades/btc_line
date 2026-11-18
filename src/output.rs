@@ -1,5 +1,6 @@
 use std::{
 	collections::{HashMap, VecDeque},
+	path::PathBuf,
 	pin::Pin,
 	sync::{
 		Arc, Mutex,
@@ -8,22 +9,39 @@ use std::{
 	time::Instant,
 };
 
-use color_eyre::eyre::{self, Result};
 use tracing::instrument;
-use v_utils::define_str_enum;
+use v_utils::macros::wrap_err;
 
 use crate::config::LiveSettings;
 
 /// Deferred flush of a rate-limited eww update. Driven by the caller (no `tokio::spawn`).
 pub type FlushFut = Pin<Box<dyn std::future::Future<Output = ()> + Send + 'static>>;
 
-define_str_enum! {
-	#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-	pub enum LineName {
-		Additional => "additional",
-		Main => "main",
-		Spy => "spy",
-	}
+#[wrap_err]
+#[derive(Debug, miette::Diagnostic, thiserror::Error)]
+pub enum OutputError {
+	#[leaf]
+	#[error("pipe file {} is inaccessible: {source}", path.display())]
+	#[diagnostic(code(btc_line::output::pipe), help("the xdg state dir must be writable; `outputs.pipes = false` turns these files off"))]
+	Pipe { path: PathBuf, source: std::io::Error },
+	#[leaf]
+	#[error("could not run `eww`: {source}")]
+	#[diagnostic(code(btc_line::output::eww_spawn), help("`eww` is not on PATH; install it or set `outputs.eww = false`"))]
+	EwwSpawn { source: std::io::Error },
+	#[leaf]
+	#[error("`eww update` exited with {status}: {stderr}")]
+	#[diagnostic(code(btc_line::output::eww_exit), help("the eww daemon may be down; start it with `eww daemon`"))]
+	EwwExit { status: std::process::ExitStatus, stderr: String },
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, derive_more::Display)]
+pub enum LineName {
+	#[display("additional")]
+	Additional,
+	#[display("main")]
+	Main,
+	#[display("spy")]
+	Spy,
 }
 
 #[derive(Clone, Debug)]
@@ -49,7 +67,7 @@ impl Output {
 	/// Returns an optional flush future. The caller must drive it to completion.
 	/// `None` means no deferred work is pending.
 	#[instrument(skip_all, fields(?name, new_value))]
-	pub async fn output(&mut self, name: LineName, new_value: String) -> Result<Option<FlushFut>> {
+	pub async fn output(&mut self, name: LineName, new_value: String) -> Result<Option<FlushFut>, OutputError> {
 		if self.old_vals.get(&name).map(|v| v == &new_value).unwrap_or(false) {
 			return Ok(None);
 		}
@@ -63,7 +81,9 @@ impl Output {
 			let file_path = v_utils::xdg_state_file!(name.to_string());
 
 			if settings.config().unwrap().outputs.pipes {
-				tokio::fs::write(&file_path, format!("{new_value_for_file}\n")).await.map_err(|e| eyre::eyre!(e))?;
+				tokio::fs::write(&file_path, format!("{new_value_for_file}\n"))
+					.await
+					.map_err(|e| OutputError::new_pipe(file_path.clone(), e))?;
 
 				// Update timestamp file
 				let timestamp_path = v_utils::xdg_state_file!(".timestamps");
@@ -73,7 +93,7 @@ impl Output {
 				let line_to_write = format!("{name_str}: {timestamp_iso}");
 
 				if timestamp_path.exists() {
-					let content = tokio::fs::read_to_string(&timestamp_path).await.map_err(|e| eyre::eyre!(e))?;
+					let content = tokio::fs::read_to_string(&timestamp_path).await.map_err(|e| OutputError::new_pipe(timestamp_path.clone(), e))?;
 					let mut lines: Vec<String> = content.lines().map(String::from).collect();
 
 					let mut found = false;
@@ -91,20 +111,24 @@ impl Output {
 						lines.push(line_to_write);
 					}
 
-					tokio::fs::write(&timestamp_path, lines.join("\n") + "\n").await.map_err(|e| eyre::eyre!(e))?;
+					tokio::fs::write(&timestamp_path, lines.join("\n") + "\n")
+						.await
+						.map_err(|e| OutputError::new_pipe(timestamp_path.clone(), e))?;
 				} else {
-					tokio::fs::write(&timestamp_path, format!("{line_to_write}\n")).await.map_err(|e| eyre::eyre!(e))?;
+					tokio::fs::write(&timestamp_path, format!("{line_to_write}\n"))
+						.await
+						.map_err(|e| OutputError::new_pipe(timestamp_path.clone(), e))?;
 				}
 			}
 
-			Ok::<_, eyre::Report>(())
+			Ok::<_, OutputError>(())
 		};
 
 		let (flush, ()) = tokio::try_join!(eww_update_handler, file_update_handler)?;
 		Ok(flush)
 	}
 
-	async fn handle_eww_update(&self, name: LineName, new_value: String) -> Result<Option<FlushFut>> {
+	async fn handle_eww_update(&self, name: LineName, new_value: String) -> Result<Option<FlushFut>, OutputError> {
 		let config = self.settings.config().unwrap();
 		if !config.outputs.eww {
 			return Ok(None);
@@ -223,15 +247,18 @@ impl Output {
 		}
 	}
 
-	async fn send_eww_update(name: LineName, value: &str) -> Result<()> {
+	async fn send_eww_update(name: LineName, value: &str) -> Result<(), OutputError> {
 		// No shell: pass `var=value` as a single literal arg so values with quotes/`$`/backticks can't
 		// break the command or inject. `eww` parses `name=value` itself.
-		tokio::process::Command::new("eww")
+		let out = tokio::process::Command::new("eww")
 			.arg("update")
 			.arg(format!("btc_line_{name}_str={value}"))
-			.status()
+			.output()
 			.await
-			.map_err(|e| eyre::eyre!(e))?;
+			.map_err(OutputError::new_eww_spawn)?;
+		if !out.status.success() {
+			return Err(OutputError::new_eww_exit(out.status, String::from_utf8_lossy(&out.stderr).trim().to_owned()));
+		}
 		Ok(())
 	}
 }

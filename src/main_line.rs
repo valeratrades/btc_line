@@ -78,7 +78,7 @@ impl MainLine {
 
 	/// # Returns
 	/// if any of the data has been updated, returns `true`
-	pub async fn collect(&mut self) -> ExchangeResult<bool> {
+	pub async fn collect(&mut self) -> bool {
 		self.ensure_ws_connection().await;
 
 		enum Event {
@@ -88,7 +88,7 @@ impl MainLine {
 
 		let event = {
 			let tick_fut = pin!(self.lsr_interval.tick());
-			let trade_fut = pin!(self.ws_connection.as_mut().unwrap().next());
+			let trade_fut = pin!(self.ws_connection.as_mut().expect("ensure_ws_connection only returns once connected").next());
 
 			match select(tick_fut, trade_fut).await {
 				Either::Left((_tick, _trade_fut)) => Event::Tick,
@@ -96,12 +96,10 @@ impl MainLine {
 			}
 		}; // futures dropped here, borrows released
 
-		let changed = match event {
+		match event {
 			Event::Tick => self.handle_lsr().await,
 			Event::Trade(trade_result) => self.handle_trade(trade_result),
-		};
-
-		Ok(changed)
+		}
 	}
 
 	async fn handle_lsr(&mut self) -> bool {

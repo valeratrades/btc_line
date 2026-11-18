@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Duration};
 
-use color_eyre::eyre::Result;
 use exchange_interactions::{Exchange, ExchangeResult};
 use tokio::time::Interval;
 use tracing::instrument;
@@ -38,7 +37,7 @@ impl AdditionalLine {
 	/// # Returns
 	/// if any of the data has been updated, returns `true`
 	#[instrument(skip_all)]
-	pub async fn collect(&mut self) -> ExchangeResult<bool> {
+	pub async fn collect(&mut self) -> bool {
 		//DEPRECATE: nuke the commented-out `dbg`s here, - were useful when figuring out correct form of main loop, that wouldn't drop arms prematurely (this arm is usually the slower one)
 		self.update_interval.tick().await;
 		//dbg!("after waiting for self.update_interval");
@@ -70,7 +69,7 @@ impl AdditionalLine {
 			changed = true;
 		}
 
-		Ok(changed)
+		changed
 	}
 
 	pub fn display(&self) -> String {
@@ -86,7 +85,7 @@ impl AdditionalLine {
 	}
 
 	/// Compares two last periods of `comparison_offset_h` hours. Default is yesterday against the day before.
-	async fn get_btc_volume_change(&self) -> Result<NowThen> {
+	async fn get_btc_volume_change(&self) -> ExchangeResult<NowThen> {
 		let base_interval = self.settings.config().unwrap().comparison_offset_h * 12;
 
 		let mut klines = self.exchange_client.klines("BTC-USDT.P".into(), "5m".into(), (base_interval * 2).into()).await?;
@@ -101,7 +100,7 @@ impl AdditionalLine {
 	}
 
 	/// Compares btc OI today against 24h ago (changes based on `comparison_offset_h`)
-	async fn get_open_interest_change(&self) -> Result<NowThen> {
+	async fn get_open_interest_change(&self) -> ExchangeResult<NowThen> {
 		let n_intervals = self.settings.config().unwrap().comparison_offset_h * 12 + 1;
 
 		let oi = self.exchange_client.open_interest("BTC-USDT.P".into(), "5m".into(), n_intervals.into()).await?;

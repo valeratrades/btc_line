@@ -4,10 +4,9 @@ use btc_line::{
 	additional_line::AdditionalLine,
 	config::{self, LiveSettings},
 	main_line::MainLine,
-	output::{FlushFut, LineName, Output},
+	output::{FlushFut, LineName, Output, OutputError},
 };
 use clap::Parser;
-use color_eyre::eyre::Result;
 use exchange_interactions::{
 	Exchange,
 	adapters::{binance::BinanceOption, generics::ws::WsConfig},
@@ -35,7 +34,7 @@ enum Command {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> miette::Result<()> {
 	v_utils::clientside!();
 	let cli = Cli::parse();
 	if let Some(Command::Config { cmd }) = cli.command {
@@ -43,8 +42,7 @@ async fn main() {
 		config::AppConfig::handle_settings_command(cmd, cli.settings_flags);
 	}
 	let settings = exit_on_error(LiveSettings::new(cli.settings_flags, Duration::from_secs(5)));
-	let eyre_result = start(settings).await;
-	exit_on_error(eyre_result);
+	Ok(start(settings).await?)
 }
 
 enum LineInstance {
@@ -52,7 +50,7 @@ enum LineInstance {
 	Additional(AdditionalLine),
 }
 
-async fn start(settings: LiveSettings) -> Result<()> {
+async fn start(settings: LiveSettings) -> Result<(), OutputError> {
 	let settings = Arc::new(settings);
 	let mut output = Output::new(Arc::clone(&settings));
 	// A silent-but-open trade socket is caught in `message_timeout + response_timeout` (a probe Ping
@@ -67,19 +65,19 @@ async fn start(settings: LiveSettings) -> Result<()> {
 	let main_line = MainLine::new(Arc::clone(&settings), bn, Duration::from_secs(15));
 	let additional_line = AdditionalLine::new(Arc::clone(&settings), Arc::new(Binance::default()) as Arc<dyn Exchange>, Duration::from_secs(15));
 
-	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, exchange_interactions::ExchangeResult<bool>)>>>;
+	type BoxFut = Pin<Box<dyn std::future::Future<Output = (LineName, LineInstance, bool)>>>;
 	let mut futures: FuturesUnordered<BoxFut> = FuturesUnordered::new();
 
 	futures.push(Box::pin(async move {
 		let mut ml = main_line;
-		let result = ml.collect().await;
-		(LineName::Main, LineInstance::Main(Box::new(ml)), result)
+		let changed = ml.collect().await;
+		(LineName::Main, LineInstance::Main(Box::new(ml)), changed)
 	}));
 
 	futures.push(Box::pin(async move {
 		let mut al = additional_line;
-		let result = al.collect().await;
-		(LineName::Additional, LineInstance::Additional(al), result)
+		let changed = al.collect().await;
+		(LineName::Additional, LineInstance::Additional(al), changed)
 	}));
 
 	// Single slot for the deferred eww-rate-limit flush future. We drive it inline (no `tokio::spawn`); the inner `flush_scheduled` flag guarantees at most one is ever in flight, so a single slot is sufficient.
@@ -89,8 +87,7 @@ async fn start(settings: LiveSettings) -> Result<()> {
 	//LOOP: main loop
 	loop {
 		tokio::select! {
-			Some((line_name, instance, result)) = futures.next() => {
-				let changed = result?;
+			Some((line_name, instance, changed)) = futures.next() => {
 				if changed {
 					let display_str = match &instance {
 						LineInstance::Main(ml) => ml.display(),
@@ -107,15 +104,15 @@ async fn start(settings: LiveSettings) -> Result<()> {
 					LineInstance::Main(ml) => {
 						futures.push(Box::pin(async move {
 							let mut ml = ml;
-							let result = ml.collect().await;
-							(LineName::Main, LineInstance::Main(ml), result)
+							let changed = ml.collect().await;
+							(LineName::Main, LineInstance::Main(ml), changed)
 						}));
 					}
 					LineInstance::Additional(al) => {
 						futures.push(Box::pin(async move {
 							let mut al = al;
-							let result = al.collect().await;
-							(LineName::Additional, LineInstance::Additional(al), result)
+							let changed = al.collect().await;
+							(LineName::Additional, LineInstance::Additional(al), changed)
 						}));
 					}
 				}

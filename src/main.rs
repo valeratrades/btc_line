@@ -4,7 +4,7 @@ use btc_line::{
 	additional_line::AdditionalLine,
 	config::{self, LiveSettings},
 	main_line::MainLine,
-	output::{FlushFut, LineName, Output, OutputError},
+	output::{FlushFut, LineName, Output},
 };
 use clap::Parser;
 use exchange_interactions::{
@@ -42,7 +42,7 @@ async fn main() -> miette::Result<()> {
 		config::AppConfig::handle_settings_command(cmd, cli.settings_flags);
 	}
 	let settings = exit_on_error(LiveSettings::new(cli.settings_flags, Duration::from_secs(5)));
-	Ok(start(settings).await?)
+	start(settings).await
 }
 
 enum LineInstance {
@@ -50,7 +50,7 @@ enum LineInstance {
 	Additional(AdditionalLine),
 }
 
-async fn start(settings: LiveSettings) -> Result<(), OutputError> {
+async fn start(settings: LiveSettings) -> miette::Result<()> {
 	let settings = Arc::new(settings);
 	let mut output = Output::new(Arc::clone(&settings));
 	// A silent-but-open trade socket is caught in `message_timeout + response_timeout` (a probe Ping

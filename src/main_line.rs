@@ -116,12 +116,9 @@ impl MainLine {
 			}
 		};
 
-		if self.percent_longs != percent_longs {
-			self.percent_longs = percent_longs;
-			true
-		} else {
-			false
-		}
+		let changed = self.percent_longs != percent_longs;
+		self.percent_longs = percent_longs;
+		changed
 	}
 
 	fn handle_trade(&mut self, trade_result: Result<Vec<BatchTrades>, WsError>) -> bool {
@@ -139,12 +136,9 @@ impl MainLine {
 				}) else {
 					return false; // empty drain (e.g. all zero-skip trades): nothing changed
 				};
-				if self.btcusdt_price != Some(price) {
-					self.btcusdt_price = Some(price);
-					true
-				} else {
-					false
-				}
+				let changed = self.btcusdt_price != Some(price);
+				self.btcusdt_price = Some(price);
+				changed
 			}
 			Err(e) => {
 				tracing::warn!("WebSocket error: {e}, will reconnect");
